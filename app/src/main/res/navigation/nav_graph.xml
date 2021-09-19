@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/GraphFragment">
+
+    <fragment
+        android:id="@+id/GraphFragment"
+        android:name="com.graphingcalculator.GraphFragment"
+        android:label="@string/graph_fragment_label"
+        tools:layout="@layout/graph">
+
+        <action
+            android:id="@+id/action_GraphFragment_to_EquationsFragment"
+            app:destination="@id/EquationsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/EquationsFragment"
+        android:name="com.graphingcalculator.EquationsFragment"
+        android:label="@string/equations_fragment_label"
+        tools:layout="@layout/equations">
+
+        <action
+            android:id="@+id/action_EquationsFragment_to_GraphFragment"
+            app:destination="@id/GraphFragment" />
+    </fragment>
+</navigation>
