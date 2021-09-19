@@ -71,21 +71,12 @@ public class SystemOfEquations {
         return list;
     }
 
-    private Stack<boolean[][]> matrix_cash = new Stack<>();
-
-    public Map<Equation, boolean[][]> calculateRange(Range range, int n) {
-        Map<Equation, boolean[][]> result = new HashMap<>();
-        Stack<boolean[][]> new_matrix_cash = new Stack<>();
+    public Map<Equation, Point[]> calculateRange(Range range, int n) {
+        Map<Equation, Point[]> result = new HashMap<>();
         for(Object i : stack) {
             if(i instanceof Equation) {
-                boolean[][] matrix;
-                if(matrix_cash.isEmpty()) {
-                    matrix = new boolean[n][n];
-                } else {
-                    matrix = matrix_cash.pop();
-                }
-                new_matrix_cash.push(matrix);
                 Equation eq = (Equation) i;
+                Point[] points = new Point[n];
                 Expression ex = new Expression(eq.getEquation());
                 for(Object j : stack) {
                     if (j instanceof Variable) {
@@ -98,21 +89,13 @@ public class SystemOfEquations {
                 }
                 BigDecimal itrX = BigDecimal.valueOf(range.startX),
                         stepX = BigDecimal.valueOf(range.getWidth()/(n-1));
-                BigDecimal itrY = BigDecimal.valueOf(range.startY),
-                        stepY = BigDecimal.valueOf(range.getHeight()/(n-1));
                 for(int x=0; x < n ; x++, itrX = itrX.add(stepX)) {
-                    for(int y=0; y < n ; y++, itrY = itrY.add(stepY)) {
-                        ex.setVariable("x", itrX);
-                        ex.setVariable("y", itrY);
-                        if(ex.eval().intValue() == 1) {
-                            matrix[y][x] = true;
-                        }
-                    }
+                    ex.setVariable("x", itrX);
+                    points[x] = new Point(itrX.doubleValue(), ex.eval().doubleValue());
                 }
-                result.put(eq, matrix);
+                result.put(eq, points);
             }
         }
-        matrix_cash = new_matrix_cash;
         return result;
     }
 }

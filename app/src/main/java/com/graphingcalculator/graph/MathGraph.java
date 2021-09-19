@@ -5,6 +5,7 @@ import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.text.TextPaint;
@@ -455,6 +456,31 @@ public class MathGraph extends View {
             }
         }
 
+        // equations
+        paint.reset();
+        paint.setStrokeWidth(functionLineWidth);
+        paint.setStyle(Paint.Style.STROKE);
+        Range range = getRangeStartEnd();
+        for(Map.Entry<Equation, Point[]> entry : equations.calculateRange(range, dataPointPerEquation).entrySet()) {
+            Equation eq = entry.getKey();
+            Point[] points = entry.getValue();
+            paint.setColor(eq.getColor().toArgb());
+            Path path = null;
+            for(Point p : points) {
+                Point converted = new Point(p.x, p.y);
+                mapGraphPointToScreen(converted);
+                if(path == null) {
+                    path = new Path();
+                    path.moveTo((float)converted.x, (float)converted.y);
+                } else {
+                    path.lineTo((float)converted.x, (float)converted.y);
+                    path.moveTo((float)converted.x, (float)converted.y);
+                }
+            }
+            path.close();
+            canvas.drawPath(path, paint);
+        }
+
         // axis
         if(showAxis) {
             paint.reset();
@@ -473,37 +499,6 @@ public class MathGraph extends View {
             paint.setStrokeWidth(axisAndGridLineWidth*1.5f);
             canvas.drawLines(arrowBottom, paint);
         }
-
-        // equations
-        paint.reset();
-        paint.setStrokeWidth(functionLineWidth);
-        paint.setStyle(Paint.Style.STROKE);
-        Range range = getRangeStartEnd();
-        for(Map.Entry<Equation, boolean[][]> entry : equations.calculateRange(range, dataPointPerEquation).entrySet()) {
-            Equation eq = entry.getKey();
-            boolean[][] matrix = entry.getValue();
-            paint.setColor(eq.getColor().toArgb());
-
-        }
-        /*
-        for(EquationP eq : equationPS) {
-            paint.setColor(eq.getColor().toArgb());
-            Path path = null;
-            Range range = getRangeStartEnd();
-            for(Point p : eq.calculateRange(range, dataPointPerEquation)) {
-                Point converted = new Point(p.x, p.y);
-                mapGraphPointToScreen(converted);
-                if(path == null) {
-                    path = new Path();
-                    path.moveTo((float)converted.x, (float)converted.y);
-                } else {
-                    path.lineTo((float)converted.x, (float)converted.y);
-                    path.moveTo((float)converted.x, (float)converted.y);
-                }
-            }
-            path.close();
-            canvas.drawPath(path, paint);
-        }*/
 
         // grid numbers
         if(showNumbers) {

@@ -28,8 +28,8 @@ public class GraphFragment extends Fragment {
         graph.setRangeByStartEnd(-10, 10, MathGraph.FIT_RANGE.BOTH);
         // test equations
         SystemOfEquations eqs = new SystemOfEquations();
-        eqs.addEquation(new Equation("y==x^2", Color.valueOf(Color.RED)));
-        eqs.addEquation(new Equation("y==sinr(x)*2.4", Color.valueOf(Color.RED)));
+        eqs.addEquation(new Equation("x^2", Color.valueOf(Color.BLUE)));
+        eqs.addEquation(new Equation("sinr(x)*2.4", Color.valueOf(Color.GREEN)));
         graph.setEquations(eqs);
     }
 }
