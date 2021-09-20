@@ -14,6 +14,9 @@
         <action
             android:id="@+id/action_GraphFragment_to_EquationsFragment"
             app:destination="@id/EquationsFragment" />
+        <action
+            android:id="@+id/action_GraphFragment_to_SettingsFragment"
+            app:destination="@id/SettingsFragment" />
     </fragment>
     <fragment
         android:id="@+id/EquationsFragment"
@@ -23,6 +26,15 @@
 
         <action
             android:id="@+id/action_EquationsFragment_to_GraphFragment"
+            app:destination="@id/GraphFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/SettingsFragment"
+        android:name="com.graphingcalculator.SettingsFragment"
+        android:label="fragment_settings"
+        tools:layout="@layout/settings" >
+        <action
+            android:id="@+id/action_SettingsFragment_to_GraphFragment"
             app:destination="@id/GraphFragment" />
     </fragment>
 </navigation>

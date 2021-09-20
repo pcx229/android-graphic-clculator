@@ -80,6 +80,10 @@ public class MathGraph extends View {
     private Paint paint = new Paint();
     private TextPaint textPaint = new TextPaint();
 
+    private OnRangeChangesListener rangeChangeListener;
+
+    private OnGraphSizeChangesListener sizeChangeListener;
+
     public MathGraph(Context context, AttributeSet attrs) {
         super(context, attrs);
 
@@ -111,6 +115,9 @@ public class MathGraph extends View {
         addOnLayoutChangeListener((view, i, i1, i2, i3, i4, i5, i6, i7) -> {
             width = getWidth();
             height = getHeight();
+            if(sizeChangeListener != null) {
+                sizeChangeListener.onChange(width, height);
+            }
             initializedViewSize = true;
             invalidate();
         });
@@ -380,6 +387,7 @@ public class MathGraph extends View {
 
     public void setEquations(SystemOfEquations equations) {
         this.equations = equations;
+        invalidate();
     }
 
     public SystemOfEquations getEquations() {
@@ -404,6 +412,37 @@ public class MathGraph extends View {
         }
         centerX = fromCenterX - amountScreenX * scaleX;
         centerY = fromCenterY + amountScreenY * scaleY;
+    }
+
+    public interface OnRangeChangesListener {
+        void onChange(Range range);
+    }
+
+    public void setOnRangeChangesListener(OnRangeChangesListener listener) {
+        rangeChangeListener = listener;
+        if(initializedViewSize) {
+            listener.onChange(getRangeStartEnd());
+        }
+    }
+
+    public interface OnGraphSizeChangesListener {
+        void onChange(float width, float height);
+    }
+
+    public void setOnGraphSizeChangesListener(OnGraphSizeChangesListener listener) {
+        sizeChangeListener = listener;
+        if(initializedViewSize) {
+            listener.onChange(width, height);
+        }
+    }
+
+    @Override
+    public void invalidate() {
+        super.invalidate();
+
+        if(rangeChangeListener != null) {
+            rangeChangeListener.onChange(getRangeStartEnd());
+        }
     }
 
     private Point mapGraphPointToScreen(Point point) {
@@ -460,25 +499,27 @@ public class MathGraph extends View {
         paint.reset();
         paint.setStrokeWidth(functionLineWidth);
         paint.setStyle(Paint.Style.STROKE);
-        Range range = getRangeStartEnd();
-        for(Map.Entry<Equation, Point[]> entry : equations.calculateRange(range, dataPointPerEquation).entrySet()) {
-            Equation eq = entry.getKey();
-            Point[] points = entry.getValue();
-            paint.setColor(eq.getColor().toArgb());
-            Path path = null;
-            for(Point p : points) {
-                Point converted = new Point(p.x, p.y);
-                mapGraphPointToScreen(converted);
-                if(path == null) {
-                    path = new Path();
-                    path.moveTo((float)converted.x, (float)converted.y);
-                } else {
-                    path.lineTo((float)converted.x, (float)converted.y);
-                    path.moveTo((float)converted.x, (float)converted.y);
+        if(equations != null) {
+            Range range = getRangeStartEnd();
+            for(Map.Entry<Equation, Point[]> entry : equations.calculateRange(range, dataPointPerEquation).entrySet()) {
+                Equation eq = entry.getKey();
+                Point[] points = entry.getValue();
+                paint.setColor(eq.getColor().toArgb());
+                Path path = null;
+                for(Point p : points) {
+                    Point converted = new Point(p.x, p.y);
+                    mapGraphPointToScreen(converted);
+                    if(path == null) {
+                        path = new Path();
+                        path.moveTo((float)converted.x, (float)converted.y);
+                    } else {
+                        path.lineTo((float)converted.x, (float)converted.y);
+                        path.moveTo((float)converted.x, (float)converted.y);
+                    }
                 }
+                path.close();
+                canvas.drawPath(path, paint);
             }
-            path.close();
-            canvas.drawPath(path, paint);
         }
 
         // axis
@@ -501,7 +542,7 @@ public class MathGraph extends View {
         }
 
         // grid numbers
-        if(showNumbers) {
+        if(showAxis && showNumbers) {
             paint.reset();
             paint.setStrokeWidth(axisAndGridLineWidth);
             paint.setStyle(Paint.Style.STROKE);
