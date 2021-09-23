@@ -10,30 +10,31 @@ import java.util.List;
 
 public class Function {
     private String name;
-    private List<String> params;
+    private List<String> arguments;
     private String body;
     private AbstractFunction call;
 
     public Function(String name) {
         this.name = name;
-        this.params = new ArrayList<>();
+        this.arguments = new ArrayList<>();
     }
 
-    public Function(String name, List<String> params, String body) {
+    public Function(String name, List<String> arguments, String body) {
         this.name = name;
-        this.params = params;
+        this.arguments = arguments;
         this.body = body;
+        update();
     }
 
     private void update() {
-        call = new AbstractFunction(name, params.size()) {
+        call = new AbstractFunction(name, arguments.size()) {
             @Override
             public BigDecimal eval(List<BigDecimal> parameters) {
-                if (parameters.size() != params.size()) {
-                    throw new Expression.ExpressionException(name + " requires " + params.size() +  " parameters");
+                if (parameters.size() != arguments.size()) {
+                    throw new Expression.ExpressionException(name + " requires " + arguments.size() +  " parameters");
                 }
                 Expression ex = new Expression(body);
-                Iterator<String> i = params.iterator();
+                Iterator<String> i = arguments.iterator();
                 Iterator<BigDecimal> j = parameters.iterator();
                 while(i.hasNext()) {
                     String name = (String) i.next();
@@ -67,17 +68,17 @@ public class Function {
         return call;
     }
 
-    public List<String> getParams() {
-        return params;
+    public List<String> getArguments() {
+        return arguments;
     }
 
     public void addParam(String name) {
-        params.add(name);
+        arguments.add(name);
         update();
     }
 
     public void removeParam(String name) {
-        params.remove(name);
+        arguments.remove(name);
         update();
     }
 }

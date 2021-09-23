@@ -1,12 +1,20 @@
 <resources>
     <string name="app_name">Graphing Calculator</string>
+    <string name="equations_page_name">Equations</string>
+    <string name="settings_page_name">Settings</string>
     <string name="action_settings">Settings</string>
-    <!-- Strings used for fragments for navigation -->
-    <string name="graph_fragment_label">Graph Fragment</string>
-    <string name="equations_fragment_label">Equations Fragment</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
     <string name="invalid_numbers_range">invalid numbers range</string>
+    <string name="explain_math_input_syntax">
+        syntax:\n
+        \t\tequations - y = expression\n
+        \t\t\t\t\t\t\t\t\t\t\t\t\t(example: y = sin(x))\n
+        \t\tvariables - name = value\n
+        \t\t\t\t\t\t\t\t\t\t\t\t\t(example: a = 3)\n
+        \t\tfunctions - name(v1, v2, ...) = expression\n
+        \t\t\t\t\t\t\t\t\t\t\t\t\t(example: f(a, b) = a+b)\n
+    </string>
 
     <string name="preference_file_key">PREFERENCES</string>
 </resources>

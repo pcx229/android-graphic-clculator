@@ -31,49 +31,4 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/AppBarLayout" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/SettingsFloatingActionButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        android:clickable="true"
-        android:scaleX="0.8"
-        android:scaleY="0.8"
-        app:layout_constraintBottom_toTopOf="@+id/ResetFloatingActionButton"
-        app:layout_constraintRight_toRightOf="parent"
-        app:srcCompat="@drawable/ic_baseline_settings_24" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/ResetFloatingActionButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        android:clickable="true"
-        android:scaleX="0.8"
-        android:scaleY="0.8"
-        app:layout_constraintBottom_toTopOf="@+id/FunctionsFloatingActionButton"
-        app:layout_constraintRight_toRightOf="parent"
-        app:srcCompat="@drawable/ic_baseline_settings_backup_restore_24" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/FunctionsFloatingActionButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        android:clickable="true"
-        app:layout_constraintBottom_toTopOf="@id/GraphFloatingActionButton"
-        app:layout_constraintRight_toRightOf="parent"
-        app:srcCompat="@drawable/ic_baseline_functions_24" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/GraphFloatingActionButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        android:clickable="true"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:srcCompat="@drawable/ic_baseline_arrow_back_24" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

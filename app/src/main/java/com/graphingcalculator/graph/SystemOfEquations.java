@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 public class SystemOfEquations {
 
@@ -71,6 +70,24 @@ public class SystemOfEquations {
         return list;
     }
 
+    public boolean hasVariable(String name) {
+        for(Variable v : getVariables()) {
+            if(v.getName().equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasFunction(String name) {
+        for(Function f : getFunctions()) {
+            if(f.getName().equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public Map<Equation, Point[]> calculateRange(Range range, int n) {
         Map<Equation, Point[]> result = new HashMap<>();
         for(Object i : stack) {
@@ -89,9 +106,18 @@ public class SystemOfEquations {
                 }
                 BigDecimal itrX = BigDecimal.valueOf(range.startX),
                         stepX = BigDecimal.valueOf(range.getWidth()/(n-1));
+                boolean error = false;
                 for(int x=0; x < n ; x++, itrX = itrX.add(stepX)) {
                     ex.setVariable("x", itrX);
-                    points[x] = new Point(itrX.doubleValue(), ex.eval().doubleValue());
+                    try {
+                        points[x] = new Point(itrX.doubleValue(), ex.eval().doubleValue());
+                    } catch(Exception e) {
+                        error = true;
+                        break;
+                    }
+                }
+                if(error) {
+                    continue;
                 }
                 result.put(eq, points);
             }

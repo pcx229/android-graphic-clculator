@@ -1,23 +1,32 @@
-package com.graphingcalculator;
+package com.graphingcalculator.data;
 
 import android.app.Application;
-import android.graphics.Color;
 import android.os.AsyncTask;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Transformations;
 
+import com.graphingcalculator.data.Entitys.equation;
+import com.graphingcalculator.data.Entitys.expression;
+import com.graphingcalculator.data.Entitys.function;
+import com.graphingcalculator.data.Entitys.variable;
 import com.graphingcalculator.graph.Equation;
+import com.graphingcalculator.graph.Function;
 import com.graphingcalculator.graph.Range;
 import com.graphingcalculator.graph.SystemOfEquations;
+import com.graphingcalculator.graph.Variable;
+
+import java.util.List;
 
 public class MainViewModel extends AndroidViewModel {
-    private SystemOfEquations equations;
     private Settings settings;
+    private AppDataRepository appDataRepository;
 
-    private MutableLiveData<SystemOfEquations> equationsUpdates = new MutableLiveData<>();
+    private LiveData<List<expression>> equationsEditDataUpdates;
+    private LiveData<SystemOfEquations> equationsUpdates;
     private MutableLiveData<Settings> settingsUpdates = new MutableLiveData<>();
 
     public interface OnResetRangeListener {
@@ -27,21 +36,34 @@ public class MainViewModel extends AndroidViewModel {
 
     public MainViewModel(@NonNull Application application) {
         super(application);
+        appDataRepository = AppDataRepository.buildInstance(application);
+    }
+
+    private SystemOfEquations parseSystemOfEquationsFromDatabase(List<expression> sys) {
+        SystemOfEquations equations = new SystemOfEquations();
+        for(expression i : sys) {
+            if(i instanceof equation) {
+                equation o = (equation) i;
+                if(o.isVisible()) {
+                    equations.addEquation(new Equation(o.getBody(), o.getColor()));
+                }
+            } else if(i instanceof variable) {
+                variable o = (variable) i;
+                equations.addVariable(new Variable(o.getName(), o.getValue()));
+            } else if(i instanceof function) {
+                function o = (function) i;
+                equations.addFunction(new Function(o.getName(), o.getArguments(), o.getBody()));
+            }
+        }
+        return equations;
     }
 
     public void init() {
-        // load settings
         settings = Settings.load(getApplication());
         settingsUpdates.postValue(settings);
 
-        // equations
-        equations = new SystemOfEquations();
-        AsyncTask.execute(() -> {
-            equations.addEquation(new Equation("x^2", Color.valueOf(Color.BLUE)));
-            equations.addEquation(new Equation("sinr(x)*2.4", Color.valueOf(Color.GREEN)));
-
-            equationsUpdates.postValue(equations);
-        });
+        equationsEditDataUpdates = appDataRepository.getSystemOfEquationsUpdates();
+        equationsUpdates = Transformations.map(equationsEditDataUpdates, this::parseSystemOfEquationsFromDatabase);
     }
 
     public void saveSettings() {
@@ -87,6 +109,16 @@ public class MainViewModel extends AndroidViewModel {
     public void setRatioLock(boolean ratioLock) {
         settings.setRatioLock(ratioLock);
         settingsUpdates.postValue(settings);
+    }
+
+    public void changeEquationsEditData(List<expression> sys) {
+        AsyncTask.execute(() -> {
+            appDataRepository.updateSystemOfEquations(sys);
+        });
+    }
+
+    public LiveData<List<expression>> getEquationsEditDataUpdates() {
+        return equationsEditDataUpdates;
     }
 
     public LiveData<SystemOfEquations> getEquationsUpdates() {

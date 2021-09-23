@@ -10,7 +10,12 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.fragment.NavHostFragment;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.graphingcalculator.data.MainViewModel;
+import com.graphingcalculator.data.Settings;
 import com.graphingcalculator.graph.MathGraph;
 import com.graphingcalculator.graph.Range;
 
@@ -18,6 +23,8 @@ public class GraphFragment extends Fragment {
 
     private MainViewModel viewModel;
     private MathGraph graph;
+    private NavController navController;
+    private FloatingActionButton functionsNavButton, settingsNavButton, resetNavButton;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -38,6 +45,21 @@ public class GraphFragment extends Fragment {
 
         viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
 
+        navController = NavHostFragment.findNavController(this);
+
+        functionsNavButton = view.findViewById(R.id.FunctionsFloatingActionButton);
+        settingsNavButton = view.findViewById(R.id.SettingsFloatingActionButton);
+        resetNavButton = view.findViewById(R.id.ResetFloatingActionButton);
+        functionsNavButton.setOnClickListener(_view -> {
+            navController.navigate(R.id.action_GraphFragment_to_EquationsFragment);
+        });
+        resetNavButton.setOnClickListener(_view -> {
+            viewModel.resetRange();
+        });
+        settingsNavButton.setOnClickListener(_view -> {
+            navController.navigate(R.id.action_GraphFragment_to_SettingsFragment);
+        });
+
         graph = (MathGraph) view.findViewById(R.id.graph);
         graph.setOnRangeChangesListener(range -> {
             viewModel.setRange(range);
@@ -51,7 +73,6 @@ public class GraphFragment extends Fragment {
                 updateGraphRange(settings.getRange());
                 graph.setShowingAxis(settings.isShowAxis());
                 graph.setShowingGrid(settings.isShowGrid());
-
                 viewModel.getSettingsUpdates().removeObserver(this);
             }
         });

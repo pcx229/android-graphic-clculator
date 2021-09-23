@@ -8,7 +8,7 @@
     <fragment
         android:id="@+id/GraphFragment"
         android:name="com.graphingcalculator.GraphFragment"
-        android:label="@string/graph_fragment_label"
+        android:label="@string/app_name"
         tools:layout="@layout/graph">
 
         <action
@@ -21,20 +21,20 @@
     <fragment
         android:id="@+id/EquationsFragment"
         android:name="com.graphingcalculator.EquationsFragment"
-        android:label="@string/equations_fragment_label"
+        android:label="@string/equations_page_name"
         tools:layout="@layout/equations">
 
         <action
-            android:id="@+id/action_EquationsFragment_to_GraphFragment"
-            app:destination="@id/GraphFragment" />
+            android:id="@+id/action_EquationsFragment_pop"
+            app:popUpTo="@id/GraphFragment" />
     </fragment>
     <fragment
         android:id="@+id/SettingsFragment"
         android:name="com.graphingcalculator.SettingsFragment"
-        android:label="fragment_settings"
-        tools:layout="@layout/settings" >
+        android:label="@string/settings_page_name"
+        tools:layout="@layout/settings">
         <action
-            android:id="@+id/action_SettingsFragment_to_GraphFragment"
-            app:destination="@id/GraphFragment" />
+            android:id="@+id/action_SettingsFragment_pop"
+            app:popUpTo="@id/GraphFragment" />
     </fragment>
 </navigation>

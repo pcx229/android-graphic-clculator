@@ -18,6 +18,8 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.graphingcalculator.data.MainViewModel;
+import com.graphingcalculator.data.Settings;
 import com.graphingcalculator.graph.Range;
 import com.graphingcalculator.graph.Ratio;
 
