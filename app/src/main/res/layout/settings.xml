@@ -36,6 +36,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="4"
                 android:ems="5"
+                android:imeOptions="actionDone"
                 android:inputType="number|numberDecimal|numberSigned" />
 
             <TextView
@@ -51,6 +52,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="4"
                 android:ems="5"
+                android:imeOptions="actionDone"
                 android:inputType="number|numberDecimal|numberSigned" />
 
         </LinearLayout>
@@ -78,6 +80,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="4"
                 android:ems="5"
+                android:imeOptions="actionDone"
                 android:inputType="number|numberDecimal|numberSigned" />
 
             <TextView
@@ -93,6 +96,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="4"
                 android:ems="5"
+                android:imeOptions="actionDone"
                 android:inputType="number|numberDecimal|numberSigned" />
 
         </LinearLayout>
@@ -120,6 +124,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="5"
                 android:ems="5"
+                android:imeOptions="actionDone"
                 android:inputType="number|numberDecimal" />
 
             <TextView
@@ -135,6 +140,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="5"
                 android:ems="5"
+                android:imeOptions="actionDone"
                 android:inputType="number|numberDecimal" />
 
             <ImageButton

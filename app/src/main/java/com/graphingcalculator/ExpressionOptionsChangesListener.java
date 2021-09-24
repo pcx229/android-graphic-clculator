@@ -13,11 +13,13 @@ public interface ExpressionOptionsChangesListener {
 
     void changeEquationVisibility(expression exp, boolean visible);
 
-    void changeExpression(expression exp, String toString);
+    void changeExpression(expression exp, String text);
 
     void changeVariableRange(expression exp, double start, double end);
 
-    void changeVariableValue(expression exp, double x);
+    void changeVariableValueProgress(expression exp, double progress);
+
+    void changeVariableValueSave(expression exp);
 
     void changeAnimateVariableStatus(expression exp, boolean isAnimated, double step, variable.ANIMATION_MODE mode);
 }

@@ -6,11 +6,13 @@ import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
+import java.util.Objects;
+
 @Entity
 
 public abstract class expression {
 
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     private long id;
 
     @ColumnInfo(name = "arrangement")
@@ -49,4 +51,24 @@ public abstract class expression {
     }
 
     public abstract String getExpression();
+
+    @NonNull
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof expression)) return false;
+        expression that = (expression) o;
+        return id == that.id &&
+                index == that.index;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, index);
+    }
 }

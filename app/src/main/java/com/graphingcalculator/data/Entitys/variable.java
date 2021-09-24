@@ -5,6 +5,8 @@ import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 
+import java.util.Objects;
+
 @Entity(tableName = "variables")
 
 public class variable extends expression {
@@ -29,13 +31,17 @@ public class variable extends expression {
     @NonNull
     private double animationStep;
 
-    public enum ANIMATION_MODE { NONE, REPEAT, BACK_AND_FORTH, STOP_AT_BOUNDARIES }
+    public enum ANIMATION_MODE { REPEAT, BACK_AND_FORTH, STOP_AT_BOUNDARIES }
 
     @ColumnInfo(name = "animate_mode")
     @NonNull
     private ANIMATION_MODE animationMode;
 
-    public variable(long id, String name, double value, double rangeStart, double rangeEnd, double animationStep, ANIMATION_MODE animationMode, long index) {
+    @ColumnInfo(name = "animate")
+    @NonNull
+    private boolean animated;
+
+    public variable(long id, String name, double value, double rangeStart, double rangeEnd, double animationStep, boolean animated, ANIMATION_MODE animationMode, long index) {
         super(id, index);
         this.name = name;
         this.value = value;
@@ -43,6 +49,7 @@ public class variable extends expression {
         this.rangeEnd = rangeEnd;
         this.animationStep = animationStep;
         this.animationMode = animationMode;
+        this.animated = animated;
     }
 
     @Ignore
@@ -53,7 +60,8 @@ public class variable extends expression {
         this.rangeStart = rangeStart;
         this.rangeEnd = rangeEnd;
         this.animationStep = 0;
-        this.animationMode = ANIMATION_MODE.NONE;
+        this.animationMode = ANIMATION_MODE.BACK_AND_FORTH;
+        this.animated = false;
     }
 
     public String getName() {
@@ -70,25 +78,46 @@ public class variable extends expression {
 
     public void setValue(double value) {
         this.value = value;
+        if(value < rangeStart) {
+            rangeStart = value;
+        }
+        if(value > rangeEnd) {
+            rangeEnd = value;
+        }
     }
 
     public double getRangeStart() {
         return rangeStart;
     }
 
-    public void setRangeStart(double rangeStart) {
-        this.rangeStart = rangeStart;
+    public void setRangeStart(double start) {
+        rangeStart = start;
+        if(value < rangeStart) {
+            value = rangeStart;
+        }
     }
 
     public double getRangeEnd() {
         return rangeEnd;
     }
 
-    public void setRangeEnd(double rangeEnd) {
-        this.rangeEnd = rangeEnd;
+    public void setRangeEnd(double end) {
+        rangeEnd = end;
+        if(value > rangeEnd) {
+            value = rangeEnd;
+        }
     }
 
-    public double getProgress() {
+    public void setRange(double start, double end) {
+        setRangeStart(start);
+        setRangeEnd(end);
+    }
+
+    public void setValueProgress(double progress) {
+        this.value = rangeStart + progress*(rangeEnd-rangeStart);
+    }
+
+    public double getValueProgress() {
         return (value - rangeStart) / (rangeEnd - rangeStart);
     }
 
@@ -101,23 +130,54 @@ public class variable extends expression {
         return animationMode;
     }
 
-    public void setAnimation(double step, @NonNull ANIMATION_MODE mode) {
+    public void setAnimation(boolean active, double step, @NonNull ANIMATION_MODE mode) {
         this.animationStep = step;
         this.animationMode = mode;
+        this.animated = active;
     }
 
     public void disableAnimation() {
         this.animationStep = 0;
-        this.animationMode = ANIMATION_MODE.NONE;
+        this.animated = false;
     }
 
     public boolean isAnimated() {
-        return animationMode != ANIMATION_MODE.NONE;
+        return animated;
+    }
+
+    public void setAnimated(boolean animate) {
+        this.animated = animated;
     }
 
     @Override
     public String getExpression() {
-        return name + " = " + value;
+        return String.format("%s = %.5f", name, value);
+    }
+
+    @NonNull
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof variable)) return false;
+        if (!super.equals(o)) return false;
+        variable variable = (variable) o;
+        return Double.compare(variable.value, value) == 0 &&
+                Double.compare(variable.rangeStart, rangeStart) == 0 &&
+                Double.compare(variable.rangeEnd, rangeEnd) == 0 &&
+                Double.compare(variable.animationStep, animationStep) == 0 &&
+                name.equals(variable.name) &&
+                animationMode == variable.animationMode &&
+                animated == variable.animated;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), name, value, rangeStart, rangeEnd, animationStep, animationMode, animated);
     }
 }
 

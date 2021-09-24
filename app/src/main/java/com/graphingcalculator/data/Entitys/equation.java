@@ -7,6 +7,8 @@ import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 
+import java.util.Objects;
+
 @Entity(tableName = "equations")
 
 public class equation extends expression {
@@ -65,6 +67,34 @@ public class equation extends expression {
     @Override
     public String getExpression() {
         return "y = " + body;
+    }
+
+    public void update(expression exp) {
+        equation eq = (equation) exp;
+        body = eq.body;
+        color = eq.color;
+    }
+
+    @NonNull
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof equation)) return false;
+        if (!super.equals(o)) return false;
+        equation equation = (equation) o;
+        return visible == equation.visible &&
+                body.equals(equation.body) &&
+                color.equals(equation.color);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), body, color, visible);
     }
 }
 

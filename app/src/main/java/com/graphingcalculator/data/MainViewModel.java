@@ -1,5 +1,6 @@
 package com.graphingcalculator.data;
 
+import android.animation.Animator;
 import android.app.Application;
 import android.os.AsyncTask;
 
@@ -22,10 +23,13 @@ import com.graphingcalculator.graph.Variable;
 import java.util.List;
 
 public class MainViewModel extends AndroidViewModel {
-    private Settings settings;
+
     private AppDataRepository appDataRepository;
 
-    private LiveData<List<expression>> equationsEditDataUpdates;
+    private Animator variablesAnimator;
+    private Settings settings;
+
+    private LiveData<List<expression>> expressionsUpdates;
     private LiveData<SystemOfEquations> equationsUpdates;
     private MutableLiveData<Settings> settingsUpdates = new MutableLiveData<>();
 
@@ -39,7 +43,7 @@ public class MainViewModel extends AndroidViewModel {
         appDataRepository = AppDataRepository.buildInstance(application);
     }
 
-    private SystemOfEquations parseSystemOfEquationsFromDatabase(List<expression> sys) {
+    private SystemOfEquations parseSystemOfEquations(List<expression> sys) {
         SystemOfEquations equations = new SystemOfEquations();
         for(expression i : sys) {
             if(i instanceof equation) {
@@ -61,9 +65,8 @@ public class MainViewModel extends AndroidViewModel {
     public void init() {
         settings = Settings.load(getApplication());
         settingsUpdates.postValue(settings);
-
-        equationsEditDataUpdates = appDataRepository.getSystemOfEquationsUpdates();
-        equationsUpdates = Transformations.map(equationsEditDataUpdates, this::parseSystemOfEquationsFromDatabase);
+        expressionsUpdates = appDataRepository.getExpressionsUpdates();
+        equationsUpdates = Transformations.map(expressionsUpdates, this::parseSystemOfEquations);
     }
 
     public void saveSettings() {
@@ -111,14 +114,32 @@ public class MainViewModel extends AndroidViewModel {
         settingsUpdates.postValue(settings);
     }
 
-    public void changeEquationsEditData(List<expression> sys) {
+    public void addExpression(expression exp) {
         AsyncTask.execute(() -> {
-            appDataRepository.updateSystemOfEquations(sys);
+            appDataRepository.addExpression(exp);
         });
     }
 
-    public LiveData<List<expression>> getEquationsEditDataUpdates() {
-        return equationsEditDataUpdates;
+    public void updateExpression(expression exp) {
+        AsyncTask.execute(() -> {
+            appDataRepository.updateExpression(exp);
+        });
+    }
+
+    public void changeExpression(expression expOld, expression expNew) {
+        AsyncTask.execute(() -> {
+            appDataRepository.changeExpression(expOld, expNew);
+        });
+    }
+
+    public void removeExpression(expression exp) {
+        AsyncTask.execute(() -> {
+            appDataRepository.removeExpression(exp);
+        });
+    }
+
+    public LiveData<List<expression>> getExpressionsUpdates() {
+        return expressionsUpdates;
     }
 
     public LiveData<SystemOfEquations> getEquationsUpdates() {

@@ -29,6 +29,7 @@
             android:layout_height="wrap_content"
             android:ems="10"
             android:hint="Enter an equation, function or variable here"
+            android:imeOptions="actionDone"
             android:inputType="text"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/SaveChangesMathExpressionButton"
@@ -78,6 +79,7 @@
                 android:id="@+id/StartVariableRangeEditText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:imeOptions="actionDone"
                 android:inputType="numberSigned|number|numberDecimal"
                 android:minWidth="75dp"
                 android:text="0" />
@@ -95,6 +97,7 @@
                 android:id="@+id/EndVariableRangeEditText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:imeOptions="actionDone"
                 android:inputType="numberSigned|number|numberDecimal"
                 android:minWidth="75dp"
                 android:text="0" />

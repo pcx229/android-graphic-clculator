@@ -1,15 +1,21 @@
 package com.graphingcalculator;
 
+import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.Icon;
+import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -19,6 +25,8 @@ import com.flask.colorpicker.builder.ColorPickerDialogBuilder;
 import com.graphingcalculator.data.Entitys.equation;
 import com.graphingcalculator.data.Entitys.expression;
 import com.graphingcalculator.data.Entitys.variable;
+
+import java.util.regex.PatternSyntaxException;
 
 public class ExpressionViewHolder extends RecyclerView.ViewHolder {
     private View mView;
@@ -58,6 +66,12 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
         animateVariableValuesButton.setImageIcon(Icon.createWithResource(mView.getContext(), resId));
     }
 
+    private void setVariableProgress(double start, double end, double progress) {
+        startVariableRangeEditText.setText(String.format("%.3f", start));
+        endVariableRangeEditText.setText(String.format("%.3f", end));
+        changeVariableValueInRangeSeekBar.setProgress((int) (progress*changeVariableValueInRangeSeekBar.getMax()));
+    }
+
     public ExpressionViewHolder(View view, ExpressionOptionsChangesListener changesListener) {
         super(view);
         mChangesListener = changesListener;
@@ -84,6 +98,13 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
             public void afterTextChanged(Editable editable) {
 
             }
+        });
+        editMathExpressionText.setOnEditorActionListener((textView, actionId, event) -> {
+            if ((actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_DOWN)
+                    || actionId == EditorInfo.IME_ACTION_DONE) {
+                saveChangesMathExpressionButton.performClick();
+            }
+            return true;
         });
 
         equationVisibleColorButton = (Button) view.findViewById(R.id.EquationVisibleColorButton);
@@ -120,7 +141,13 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
             try {
                 mChangesListener.changeExpression(exp, editMathExpressionText.getText().toString());
                 saveChangesMathExpressionButton.setVisibility(View.GONE);
-            } catch(Exception e) {
+                init(exp);
+                editMathExpressionText.clearFocus();
+                InputMethodManager imm = (InputMethodManager) mView.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(editMathExpressionText.getWindowToken(), 0);
+            } catch(PatternSyntaxException e) {
+                editMathExpressionText.setError(e.getDescription());
+            } catch(IllegalArgumentException e) {
                 editMathExpressionText.setError(e.getMessage());
             }
         });
@@ -128,25 +155,38 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
         variableRangeOptionsView = (View) view.findViewById(R.id.VariableRangeOptionsView);
         startVariableRangeEditText = (EditText) view.findViewById(R.id.StartVariableRangeEditText);
         endVariableRangeEditText = (EditText) view.findViewById(R.id.EndVariableRangeEditText);
-        View.OnFocusChangeListener variableEditRangeFocusListener = new View.OnFocusChangeListener() {
+        TextView.OnEditorActionListener variableEditRangeActionListener = new TextView.OnEditorActionListener() {
+
             @Override
-            public void onFocusChange(View view, boolean hasFocus) {
-                if(!hasFocus) {
-                    double start = Double.parseDouble(startVariableRangeEditText.getText().toString()),
-                            end = Double.parseDouble(endVariableRangeEditText.getText().toString());
-                    if(start >= end) {
-                        String error = "invalid range";
-                        startVariableRangeEditText.setError(error);
-                        endVariableRangeEditText.setError(error);
-                        changeVariableValueInRangeSeekBar.setActivated(false);
-                    } else {
-                        mChangesListener.changeVariableRange(exp, start, end);
-                    }
+            public boolean onEditorAction(TextView textView, int actionId, KeyEvent event) {
+
+                double start = Double.parseDouble(startVariableRangeEditText.getText().toString()),
+                        end = Double.parseDouble(endVariableRangeEditText.getText().toString());
+                if(start >= end) {
+                    String error = "invalid range";
+                    startVariableRangeEditText.setError(error);
+                    endVariableRangeEditText.setError(error);
+                    changeVariableValueInRangeSeekBar.setActivated(false);
+                } else {
+                    mChangesListener.changeVariableRange(exp, start, end);
+                    variable o = (variable) exp;
+                    setVariableProgress(o.getRangeStart(), o.getRangeEnd(), o.getValueProgress());
+                    editMathExpressionText.setText(o.getExpression());
+                    startVariableRangeEditText.clearFocus();
+                    endVariableRangeEditText.clearFocus();
                 }
+                if ((actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_DOWN)
+                        || actionId == EditorInfo.IME_ACTION_DONE) {
+                    InputMethodManager imm = (InputMethodManager) mView.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(startVariableRangeEditText.getWindowToken(), 0);
+                    imm.hideSoftInputFromWindow(endVariableRangeEditText.getWindowToken(), 0);
+                    return true;
+                }
+                return false;
             }
         };
-        startVariableRangeEditText.setOnFocusChangeListener(variableEditRangeFocusListener);
-        endVariableRangeEditText.setOnFocusChangeListener(variableEditRangeFocusListener);
+        startVariableRangeEditText.setOnEditorActionListener(variableEditRangeActionListener);
+        endVariableRangeEditText.setOnEditorActionListener(variableEditRangeActionListener);
         TextWatcher variableEditRangeTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -169,11 +209,14 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
         endVariableRangeEditText.addTextChangedListener(variableEditRangeTextWatcher);
         changeVariableValueInRangeSeekBar = (SeekBar) view.findViewById(R.id.ChangeVariableValueInRangeSeekBar);
         changeVariableValueInRangeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                variable i = (variable) exp;
-                double x = i.getRangeStart() + Double.parseDouble(endVariableRangeEditText.getText().toString()) * (i.getRangeEnd() - i.getRangeStart());
-                mChangesListener.changeVariableValue(exp, x);
+                if(fromUser) {
+                    double x = 1.0*changeVariableValueInRangeSeekBar.getProgress() / changeVariableValueInRangeSeekBar.getMax();
+                    mChangesListener.changeVariableValueProgress(exp, x);
+                    editMathExpressionText.setText(exp.getExpression());
+                }
             }
 
             @Override
@@ -183,7 +226,7 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-
+                mChangesListener.changeVariableValueSave(exp);
             }
         });
         animateVariableValuesButton = (ImageButton) view.findViewById(R.id.AnimateVariableValuesButton);
@@ -195,26 +238,28 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
         });
     }
 
-    public void init(expression i) {
-        exp = i;
+    public void init(expression exp) {
+        this.exp = exp;
         // reset
         variableRangeOptionsView.setVisibility(View.GONE);
         equationVisibleColorButton.setVisibility(View.GONE);
         saveChangesMathExpressionButton.setVisibility(View.GONE);
         // build
-        editMathExpressionText.setText(i.getExpression());
-        if(i instanceof equation) {
-            equation o = (equation) i;
+        editMathExpressionText.setText(exp.getExpression());
+        if(exp instanceof equation) {
+            equation o = (equation) exp;
             equationVisibleColorButton.setVisibility(View.VISIBLE);
             setEquationVisible(o.isVisible());
             equationVisibleColorButton.setForegroundTintList(ColorStateList.valueOf(o.getColor().toArgb()));
-        } else if(i instanceof variable) {
-            variable o = (variable) i;
+        } else if(exp instanceof variable) {
+            variable o = (variable) exp;
             variableRangeOptionsView.setVisibility(View.VISIBLE);
-            startVariableRangeEditText.setText(String.format("%.3f", o.getRangeStart()));
-            changeVariableValueInRangeSeekBar.setProgress((int) (o.getProgress()*100));
-            endVariableRangeEditText.setText(String.format("%.3f", o.getRangeEnd()));
+            setVariableProgress(o.getRangeStart(), o.getRangeEnd(), o.getValueProgress());
             setVariableAnimated(o.isAnimated());
         }
+    }
+
+    public void update(expression exp, Bundle changes) {
+        init(exp);
     }
 }

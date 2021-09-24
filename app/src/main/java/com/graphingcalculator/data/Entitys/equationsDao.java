@@ -18,6 +18,9 @@ public interface equationsDao {
     @Query("SELECT * FROM equations")
     LiveData<List<equation>> getAllLiveData();
 
+    @Query("SELECT Max(arrangement) FROM equations")
+    Long getMaxIndex();
+
     @Insert
     Long insert(equation e);
 

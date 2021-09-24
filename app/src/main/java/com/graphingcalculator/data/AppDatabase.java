@@ -21,7 +21,7 @@ import com.graphingcalculator.data.Entitys.variablesDao;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Database(entities = {expression.class, equation.class, variable.class, function.class}, version = 7, exportSchema = false)
+@Database(entities = {expression.class, equation.class, variable.class, function.class}, version = 10, exportSchema = false)
 @TypeConverters({ ConvertVariableAnimationMode.class, ConvertColor.class, ConvertListStrings.class })
 abstract class AppDatabase extends RoomDatabase {
     private static final String DB_NAME = "app_db";

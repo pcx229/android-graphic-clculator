@@ -18,6 +18,9 @@ public interface variablesDao {
     @Query("SELECT * FROM variables")
     LiveData<List<variable>> getAllLiveData();
 
+    @Query("SELECT Max(arrangement) FROM variables")
+    Long getMaxIndex();
+
     @Insert
     Long insert(variable v);
 

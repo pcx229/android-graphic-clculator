@@ -4,9 +4,11 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -16,6 +18,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.graphingcalculator.data.Entitys.equation;
@@ -41,8 +44,8 @@ public class EquationsFragment extends Fragment {
     private TextView mathInputSyntaxInfoText;
     private EditText mathInputText;
 
-    private SystemOfEquations systemOfEquations;
-    private List<expression> systemOfEquationsEdit;
+    private SystemOfEquations equations;
+    private List<expression> expressions;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -59,37 +62,51 @@ public class EquationsFragment extends Fragment {
         equationsRecyclerViewAdapter.setExpressionItemEditChangesListener(new ExpressionOptionsChangesListener() {
             @Override
             public void changeEquationColor(expression exp, Color color) {
-
+                ((equation)exp).setColor(color);
+                viewModel.updateExpression(exp);
             }
 
             @Override
             public void removeExpression(expression exp) {
-
+                viewModel.removeExpression(exp);
             }
 
             @Override
             public void changeEquationVisibility(expression exp, boolean visible) {
-
+                ((equation)exp).setVisible(visible);
+                viewModel.updateExpression(exp);
             }
 
             @Override
-            public void changeExpression(expression exp, String toString) {
-
+            public void changeExpression(expression expOld, String text) {
+                expression expNew = parseExpression(expOld, text);
+                if(expNew == expOld) {
+                    viewModel.updateExpression(expNew);
+                } else {
+                    viewModel.changeExpression(expOld, expNew);
+                }
             }
 
             @Override
             public void changeVariableRange(expression exp, double start, double end) {
-
+                ((variable)exp).setRange(start, end);
+                viewModel.updateExpression(exp);
             }
 
             @Override
-            public void changeVariableValue(expression exp, double x) {
+            public void changeVariableValueProgress(expression exp, double progress) {
+                ((variable)exp).setValueProgress(progress);
+            }
 
+            @Override
+            public void changeVariableValueSave(expression exp) {
+                viewModel.updateExpression(exp);
             }
 
             @Override
             public void changeAnimateVariableStatus(expression exp, boolean isAnimated, double step, variable.ANIMATION_MODE mode) {
-
+                ((variable)exp).setAnimation(isAnimated, step, mode);
+                viewModel.updateExpression(exp);
             }
         });
         equationsRecyclerView.setAdapter(equationsRecyclerViewAdapter);
@@ -114,6 +131,13 @@ public class EquationsFragment extends Fragment {
 
             }
         });
+        mathInputText.setOnEditorActionListener((textView, actionId, event) -> {
+            if ((actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_DOWN)
+                    || actionId == EditorInfo.IME_ACTION_DONE) {
+                addMathInputExpressionButton.performClick();
+            }
+            return true;
+        });
 
         showMathInputHelpToggleButton = (ImageButton) view.findViewById(R.id.ShowMathInputHelpToggleButton);
         showMathInputHelpToggleButton.setOnClickListener(_view -> {
@@ -127,9 +151,9 @@ public class EquationsFragment extends Fragment {
         addMathInputExpressionButton = (ImageButton) view.findViewById(R.id.AddMathInputExpressionButton);
         addMathInputExpressionButton.setOnClickListener(_view -> {
             try {
-                expression ex = parse(mathInputText.getText().toString());
-                systemOfEquationsEdit.add(ex);
-                viewModel.changeEquationsEditData(systemOfEquationsEdit);
+                expression exp = parseExpression(null, mathInputText.getText().toString());
+                viewModel.addExpression(exp);
+                scrollExpressionListToTop();
                 mathInputText.setText("");
             } catch(PatternSyntaxException e) {
                 mathInputText.setError(e.getDescription());
@@ -141,17 +165,26 @@ public class EquationsFragment extends Fragment {
         viewModel.getEquationsUpdates().observe(getActivity(), new Observer<SystemOfEquations>() {
             @Override
             public void onChanged(SystemOfEquations sys) {
-                systemOfEquations = sys;
+                equations = sys;
             }
         });
 
-        viewModel.getEquationsEditDataUpdates().observe(getActivity(), new Observer<List<expression>>() {
+        viewModel.getExpressionsUpdates().observe(getActivity(), new Observer<List<expression>>() {
             @Override
             public void onChanged(List<expression> sys) {
-                systemOfEquationsEdit = sys;
-                equationsRecyclerViewAdapter.setItems(sys);
+                expressions = sys;
+                equationsRecyclerViewAdapter.setItemsUpdates(sys);
             }
         });
+    }
+
+    private void scrollExpressionListToTop() {
+        if (equationsRecyclerView != null) {
+            equationsRecyclerView.postDelayed(() -> {
+                ((LinearLayoutManager)equationsRecyclerView.getLayoutManager()).scrollToPositionWithOffset(0, 0);
+                equationsRecyclerView.scrollToPosition(0);
+            }, 500);
+        }
     }
 
     private int getRandomColor() {
@@ -159,7 +192,20 @@ public class EquationsFragment extends Fragment {
         return Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));
     }
 
-    public expression parse(String pattern) {
+    public boolean expressionsHaveTheSameType(expression e1, expression e2) {
+        if(e1 instanceof equation && e2 instanceof equation) {
+            return true;
+        }
+        if(e1 instanceof variable && e2 instanceof variable) {
+            return true;
+        }
+        if(e1 instanceof function && e2 instanceof function) {
+            return true;
+        }
+        return false;
+    }
+
+    public expression parseExpression(expression last, String pattern) {
 
         if(pattern.trim().equals("")) {
             throw new PatternSyntaxException("expression is empty", pattern , 0);
@@ -170,8 +216,13 @@ public class EquationsFragment extends Fragment {
         Matcher equationMatcher = equationPattern.matcher(pattern);
         if(equationMatcher.matches()) {
             String text = equationMatcher.group(1);
-            Color color = Color.valueOf(getRandomColor());
-            return new equation(text, color);
+            if(last != null && last instanceof equation) {
+                ((equation) last).setBody(text);
+                return last;
+            } else {
+                Color color = Color.valueOf(getRandomColor());
+                return new equation(text, color);
+            }
         }
 
         // variable
@@ -180,12 +231,18 @@ public class EquationsFragment extends Fragment {
         if(variableMatcher.matches()) {
             String name = variableMatcher.group(1);
             double value = Double.parseDouble(variableMatcher.group(2));
-            double startValue = value - 10.0,
-                    endValue = value + 10.0;
-            if(systemOfEquations.hasVariable(name)) {
-                throw new IllegalArgumentException("variable name already exist");
+            if(last != null && last instanceof variable) {
+                ((variable) last).setName(name);
+                ((variable) last).setValue(value);
+                return last;
+            } else {
+                double startValue = value - 10.0,
+                        endValue = value + 10.0;
+                if (equations.hasVariable(name)) {
+                    throw new IllegalArgumentException("variable name already exist");
+                }
+                return new variable(name, value, startValue, endValue);
             }
-            return new variable(name, value, startValue, endValue);
         }
 
         // function
@@ -202,10 +259,17 @@ public class EquationsFragment extends Fragment {
                 }
             }
             String body = functionMatcher.group(3);
-            if(systemOfEquations.hasFunction(name)) {
-                throw new IllegalArgumentException("function name already exist");
+            if(last != null && last instanceof function) {
+                ((function) last).setBody(body);
+                ((function) last).setName(name);
+                ((function) last).setArguments(arguments);
+                return last;
+            } else {
+                if(equations.hasFunction(name)) {
+                    throw new IllegalArgumentException("function name already exist");
+                }
+                return new function(name, arguments, body);
             }
-            return new function(name, arguments, body);
         }
 
         throw new PatternSyntaxException("syntax error", pattern , 0);

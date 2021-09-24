@@ -1,12 +1,16 @@
 package com.graphingcalculator;
 
+import android.content.Context;
 import android.graphics.drawable.Icon;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Switch;
@@ -291,6 +295,26 @@ public class SettingsFragment extends Fragment {
         yMinRangeNumberInput.setOnFocusChangeListener(rangeFocusListener);
         yMaxRangeNumberInput.setOnFocusChangeListener(rangeFocusListener);
 
+        TextView.OnEditorActionListener rangeNumberInputActionListener = (textView, actionId, event) -> {
+            if ((actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_DOWN)
+                    || actionId == EditorInfo.IME_ACTION_DONE) {
+                xMinRangeNumberInput.clearFocus();
+                xMaxRangeNumberInput.clearFocus();
+                yMinRangeNumberInput.clearFocus();
+                yMaxRangeNumberInput.clearFocus();
+                InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(xMinRangeNumberInput.getWindowToken(), 0);
+                imm.hideSoftInputFromWindow(xMaxRangeNumberInput.getWindowToken(), 0);
+                imm.hideSoftInputFromWindow(yMinRangeNumberInput.getWindowToken(), 0);
+                imm.hideSoftInputFromWindow(yMaxRangeNumberInput.getWindowToken(), 0);
+            }
+            return true;
+        };
+        xMinRangeNumberInput.setOnEditorActionListener(rangeNumberInputActionListener);
+        xMaxRangeNumberInput.setOnEditorActionListener(rangeNumberInputActionListener);
+        yMinRangeNumberInput.setOnEditorActionListener(rangeNumberInputActionListener);
+        yMaxRangeNumberInput.setOnEditorActionListener(rangeNumberInputActionListener);
+
         xRatioRangeNumberInput = (EditText) view.findViewById(R.id.XRatioRangeNumberInput);
         xRatioRangeNumberInput.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
@@ -335,6 +359,19 @@ public class SettingsFragment extends Fragment {
                 }
             }
         });
+        TextView.OnEditorActionListener ratioRangeNumberActionListener = (textView, actionId, event) -> {
+            if ((actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_DOWN)
+                    || actionId == EditorInfo.IME_ACTION_DONE) {
+                xRatioRangeNumberInput.clearFocus();
+                yRatioRangeNumberInput.clearFocus();
+                InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(xRatioRangeNumberInput.getWindowToken(), 0);
+                imm.hideSoftInputFromWindow(yRatioRangeNumberInput.getWindowToken(), 0);
+            }
+            return true;
+        };
+        xRatioRangeNumberInput.setOnEditorActionListener(ratioRangeNumberActionListener);
+        yRatioRangeNumberInput.setOnEditorActionListener(ratioRangeNumberActionListener);
 
         centerRange = (TextView) view.findViewById(R.id.CenterRangeTextView);
 

@@ -18,6 +18,9 @@ public interface functionsDao {
     @Query("SELECT * FROM functions")
     LiveData<List<function>> getAllLiveData();
 
+    @Query("SELECT Max(arrangement) FROM functions")
+    Long getMaxIndex();
+
     @Insert
     Long insert(function f);
 

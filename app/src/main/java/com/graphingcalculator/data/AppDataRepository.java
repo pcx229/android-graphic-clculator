@@ -16,6 +16,7 @@ import com.graphingcalculator.data.Entitys.variablesDao;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 class AppDataRepository {
     private static volatile AppDataRepository instance;
@@ -41,16 +42,16 @@ class AppDataRepository {
         functionsDao = db.functionsDao();
     }
 
-    public List<expression> getSystemOfEquations() {
-        List<expression> sys = new ArrayList<>();
-        sys.addAll(equationsDao.getAll());
-        sys.addAll(variablesDao.getAll());
-        sys.addAll(functionsDao.getAll());
-        sys.sort((a, b) -> (int) (a.getIndex() - b.getIndex()));
-        return sys;
+    public List<expression> getExpressions() {
+        List<expression> exps = new ArrayList<>();
+        exps.addAll(equationsDao.getAll());
+        exps.addAll(variablesDao.getAll());
+        exps.addAll(functionsDao.getAll());
+        exps.sort((a, b) -> (int) (b.getIndex() - a.getIndex()));
+        return exps;
     }
 
-    public LiveData<List<expression>> getSystemOfEquationsUpdates() {
+    public LiveData<List<expression>> getExpressionsUpdates() {
         MediatorLiveData<List<expression>[]> live = new MediatorLiveData<>();
         ArrayList[] all = new ArrayList[] {
                 new ArrayList<expression>(),
@@ -77,35 +78,70 @@ class AppDataRepository {
             list.addAll(all[0]);
             list.addAll(all[1]);
             list.addAll(all[2]);
-            list.sort((a, b) -> (int) (a.getIndex() - b.getIndex()));
+            list.sort((a, b) -> (int) (b.getIndex() - a.getIndex()));
             return list;
         });
     }
 
-    public void updateSystemOfEquations(List<expression> sys) {
-        int index = 0;
-        for(expression i : sys) {
-            i.setIndex(index);
-            if(i.isInitialized()) {
-                if(i instanceof equation) {
-                    equationsDao.update((equation)i);
-                } else if(i instanceof variable) {
-                    variablesDao.update((variable)i);
-                } else if(i instanceof function) {
-                    functionsDao.update((function)i);
-                }
-            } else {
-                long id = 0;
-                if(i instanceof equation) {
-                    id = equationsDao.insert((equation)i);
-                } else if(i instanceof variable) {
-                    id = variablesDao.insert((variable)i);
-                } else if(i instanceof function) {
-                    id = functionsDao.insert((function)i);
-                }
-                i.setId(id);
-            }
-            index++;
+    private long getNextExpressionIndex() {
+        Long max = 0L, next;
+        next = equationsDao.getMaxIndex();
+        if(next != null && next > max) {
+            max = next;
         }
+        next = variablesDao.getMaxIndex();
+        if(next != null && next > max) {
+            max = next;
+        }
+        next = functionsDao.getMaxIndex();
+        if(next != null && next > max) {
+            max = next;
+        }
+        return max + 1;
+    }
+
+    public void addExpression(expression exp, long index) {
+        long id = 0;
+        exp.setId(new Random().nextInt());
+        if(index == -1) {
+            exp.setIndex(getNextExpressionIndex());
+        }
+        if(exp instanceof equation) {
+            id = equationsDao.insert((equation)exp);
+        } else if(exp instanceof variable) {
+            id = variablesDao.insert((variable)exp);
+        } else if(exp instanceof function) {
+            id = functionsDao.insert((function)exp);
+        }
+        exp.setId(id);
+    }
+
+    public void addExpression(expression exp) {
+        addExpression(exp, -1);
+    }
+
+    public void updateExpression(expression exp) {
+        if(exp instanceof equation) {
+            equationsDao.update((equation)exp);
+        } else if(exp instanceof variable) {
+            variablesDao.update((variable)exp);
+        } else if(exp instanceof function) {
+            functionsDao.update((function)exp);
+        }
+    }
+
+    public void removeExpression(expression exp) {
+        if(exp instanceof equation) {
+            equationsDao.delete((equation)exp);
+        } else if(exp instanceof variable) {
+            variablesDao.delete((variable)exp);
+        } else if(exp instanceof function) {
+            functionsDao.delete((function)exp);
+        }
+    }
+
+    public void changeExpression(expression expOld, expression expNew) {
+        removeExpression(expOld);
+        addExpression(expNew, expOld.getIndex());
     }
 }
