@@ -77,7 +77,7 @@ public class GraphFragment extends Fragment {
             }
         });
         viewModel.getEquationsUpdates().observe(getActivity(), equations -> {
-            //graph.setEquations(equations);
+            graph.setEquations(equations);
         });
     }
 }

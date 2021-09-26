@@ -27,7 +27,6 @@ import com.graphingcalculator.R;
  *         custom:showGrid="true"
  *         custom:gridColor="Color.BLACK"
  *         custom:gridBlockSize="10dp"
- *         custom:dataPointPerEquation="100"
  *         android:colorBackground="Color.WHITE"
  *         android:fontFamily="null"
  *         android:textSize="5dp"
@@ -49,7 +48,7 @@ public class MathGraph extends View {
     public final static float DEFAULT_BLOCK_SIZE_DP = 100f;
     public final static float DEFAULT_AXIS_GRID_LINE_WIDTH_DP = 3f;
     private float axisAndGridLineWidth;
-    public final static float DEFAULT_FUNCTION_LINE_WIDTH_DP = 5f;
+    public final static float DEFAULT_FUNCTION_LINE_WIDTH_DP = 10f;
     private float functionLineWidth;
     private float fontSize;
     public final static float DEFAULT_FONT_SIZE_SP = 40f;
@@ -58,8 +57,6 @@ public class MathGraph extends View {
     private Typeface fontFamily;
     private int backgroundColor;
     public final static int DEFAULT_BACKGROUND_COLOR = Color.WHITE;
-    private int dataPointPerEquation;
-    public final static int DEFAULT_DATA_POINTS_PER_EQUATION = 100;
     private static final double MAX_RANGE_UNTIL_CIRCLE_HIGHLIGHT = 1000.0,
             MIN_RANGE_UNTIL_CIRCLE_HIGHLIGHT = 0.01;
     public final static int CENTER_POINT_HIGHLIGHT_CIRCLE_SIZE_DP = 3;
@@ -100,7 +97,6 @@ public class MathGraph extends View {
             showGrid = a.getBoolean(R.styleable.MathGraph_showGrid, true);
             gridColor = a.getColor(R.styleable.MathGraph_gridColor, DEFAULT_GRID_COLOR);
             gridBlockSize = a.getDimension(R.styleable.MathGraph_gridBlockSize, DEFAULT_BLOCK_SIZE_DP);
-            dataPointPerEquation = a.getInteger(R.styleable.MathGraph_dataPointPerEquation, DEFAULT_DATA_POINTS_PER_EQUATION);
 
             backgroundColor = a.getColor(R.styleable.MathGraph_android_textColor, DEFAULT_BACKGROUND_COLOR);
             fontFamily = a.getFont(R.styleable.MathGraph_android_fontFamily);
@@ -311,15 +307,6 @@ public class MathGraph extends View {
         invalidate();
     }
 
-    public int getDataPointPerEquation() {
-        return dataPointPerEquation;
-    }
-
-    public void setDataPointPerEquation(int dataPointPerEquation) {
-        this.dataPointPerEquation = dataPointPerEquation;
-        invalidate();
-    }
-
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         scaleDetector.onTouchEvent(event);
@@ -478,7 +465,8 @@ public class MathGraph extends View {
         }
 
         // setup canvas
-        canvas.setDensity((int) getResources().getDisplayMetrics().density);
+        float density = getResources().getDisplayMetrics().density;
+        canvas.setDensity((int) density);
 
         // paint background
         paint.reset();
@@ -514,28 +502,10 @@ public class MathGraph extends View {
         paint.reset();
         paint.setStrokeWidth(functionLineWidth);
         paint.setStyle(Paint.Style.STROKE);
-        /*
         if(equations != null) {
-            for(Map.Entry<Equation, Point[]> entry : equations.calculateRange(range, dataPointPerEquation).entrySet()) {
-                Equation eq = entry.getKey();
-                Point[] points = entry.getValue();
-                paint.setColor(eq.getColor().toArgb());
-                Path path = null;
-                for(Point p : points) {
-                    Point converted = new Point(p.x, p.y);
-                    mapGraphPointToScreen(converted);
-                    if(path == null) {
-                        path = new Path();
-                        path.moveTo((float)converted.x, (float)converted.y);
-                    } else {
-                        path.lineTo((float)converted.x, (float)converted.y);
-                        path.moveTo((float)converted.x, (float)converted.y);
-                    }
-                }
-                path.close();
-                canvas.drawPath(path, paint);
-            }
-        }*/
+            SystemOfEquations.Renderer renderer = equations.render(width, height, density);
+            renderer.render(range, paint, canvas);
+        }
 
         // axis
         if(showAxis) {

@@ -66,7 +66,7 @@ public class equation extends expression {
 
     @Override
     public String getExpression() {
-        return "y = " + body;
+        return body;
     }
 
     public void update(expression exp) {

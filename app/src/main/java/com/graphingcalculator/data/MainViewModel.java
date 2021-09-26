@@ -68,9 +68,11 @@ public class MainViewModel extends AndroidViewModel {
                     for(expression exp : expressions) {
                         if(exp instanceof variable) {
                             variable o = (variable) exp;
-                            o.stepAnimation();
-                            equations.setVariable(o.getName(), o.getValue());
-                            changes = true;
+                            if(o.isAnimated()) {
+                                o.stepAnimation();
+                                equations.setVariable(o.getName(), o.getValue());
+                                changes = true;
+                            }
                         }
                     }
                     if(changes) {
@@ -240,10 +242,10 @@ public class MainViewModel extends AndroidViewModel {
         }
 
         // equation
-        Pattern equationPattern = Pattern.compile("^[ ]*y[ ]*=[ ]*(.+)[ ]*$");
+        Pattern equationPattern = Pattern.compile("^[ ]*(.+)[ ]*(=|>=|<=|>|<)[ ]*(.+)[ ]*$");
         Matcher equationMatcher = equationPattern.matcher(pattern);
         if(equationMatcher.matches()) {
-            String text = equationMatcher.group(1);
+            String text = equationMatcher.group(1).trim() + " " + equationMatcher.group(2) + " " + equationMatcher.group(3).trim();
             if(last instanceof equation) {
                 ((equation) last).setBody(text);
                 return last;

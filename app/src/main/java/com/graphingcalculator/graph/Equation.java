@@ -4,16 +4,16 @@ import android.graphics.Color;
 
 public class Equation {
     private String equation;
-    private Color color;
+    private int color;
 
     public Equation(String equation) {
         this.equation = equation;
-        this.color = getRandomColor();
+        this.color = getRandomColor().toArgb();
     }
 
     public Equation(String equation, Color color) {
         this.equation = equation;
-        this.color = color;
+        this.color = color.toArgb();
     }
 
     public String getEquation() {
@@ -24,15 +24,15 @@ public class Equation {
         this.equation = equation;
     }
 
-    public Color getColor() {
+    public int getColor() {
         return color;
     }
 
     public void setColor(Color color) {
-        this.color = color;
+        this.color = color.toArgb();
     }
 
-    public static Color getRandomColor() {
+    private static Color getRandomColor() {
         return Color.valueOf((int)(Math.random() * 0x1000000));
     }
 }
