@@ -147,6 +147,34 @@ public class variable extends expression {
 
     public void setAnimated(boolean animate) {
         this.animated = animated;
+        animationStep = Math.abs(animationStep);
+    }
+
+    public void stepAnimation() {
+        if(animated) {
+            value += animationStep;
+            switch(animationMode) {
+                case BACK_AND_FORTH:
+                    if(value > rangeEnd) {
+                        value = rangeEnd;
+                        animationStep = -animationStep;
+                    } else if(value < rangeStart) {
+                        value = rangeStart;
+                        animationStep = -animationStep;
+                    }
+                    break;
+                case REPEAT:
+                    if(value > rangeEnd) {
+                        value = rangeStart;
+                    }
+                    break;
+                case STOP_AT_BOUNDARIES:
+                    if(value > rangeEnd) {
+                        value = rangeEnd;
+                    }
+                    break;
+            }
+        }
     }
 
     @Override

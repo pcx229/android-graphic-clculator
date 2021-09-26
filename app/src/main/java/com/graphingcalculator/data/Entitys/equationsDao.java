@@ -18,7 +18,7 @@ public interface equationsDao {
     @Query("SELECT * FROM equations")
     LiveData<List<equation>> getAllLiveData();
 
-    @Query("SELECT Max(arrangement) FROM equations")
+    @Query("SELECT IFNULL(MAX(arrangement), 0) FROM equations")
     Long getMaxIndex();
 
     @Insert
@@ -44,4 +44,7 @@ public interface equationsDao {
 
     @Delete
     void delete(equation e);
+
+    @Query("DELETE FROM equations")
+    void deleteAll();
 }

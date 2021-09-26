@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -72,6 +73,23 @@ public class ExpressionsListViewAdapter extends RecyclerView.Adapter<ExpressionV
         return mValues;
     }
 
+    public void removeItem(expression exp) {
+        int index = mValues.indexOf(exp);
+        mValues.remove(exp);
+        notifyItemRemoved(index);
+    }
+
+    public void addItem(expression exp) {
+        mValues.add(0, exp);
+        notifyItemRangeInserted(0, 1);
+    }
+
+    public void changeItem(expression oldExp, expression newExp) {
+        int index = mValues.indexOf(oldExp);
+        mValues.set(index, newExp);
+        notifyItemChanged(index);
+    }
+
     public void setItemsUpdates(List<expression> items) {
         DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new ExpressionDiffUtilCallBack(items, mValues));
         diffResult.dispatchUpdatesTo(this);
@@ -95,18 +113,36 @@ public class ExpressionsListViewAdapter extends RecyclerView.Adapter<ExpressionV
     }
 
     @Override
+    public void onViewAttachedToWindow(@NonNull ExpressionViewHolder holder) {
+        super.onViewAttachedToWindow(holder);
+        holder.onAttached();
+    }
+
+    @Override
+    public void onViewRecycled(@NonNull ExpressionViewHolder holder) {
+        super.onViewRecycled(holder);
+        holder.onRecycled();
+    }
+
+    @Override
+    public void onViewDetachedFromWindow(@NonNull ExpressionViewHolder holder) {
+        super.onViewDetachedFromWindow(holder);
+        holder.onDetached();
+    }
+
+    @Override
     public void onBindViewHolder(ExpressionViewHolder holder, int position, List<Object> payloads) {
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads);
         } else {
             Bundle changes = (Bundle) payloads.get(0);
-            holder.update(mValues.get(position), changes);
+            holder.onUpdated(mValues.get(position), changes);
         }
     }
 
     @Override
     public void onBindViewHolder(ExpressionViewHolder holder, int position) {
-        holder.init(mValues.get(position));
+        holder.onInitialized(mValues.get(position));
     }
 
     @Override

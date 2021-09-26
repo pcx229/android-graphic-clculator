@@ -3,13 +3,21 @@ package com.graphingcalculator.graph;
 class Point {
     public double x, y;
 
-    public Point(double x, double y) {
-        this.x = x;
-        this.y = y;
+    public Point() {
+
     }
 
-    public Point copy() {
-        return new Point(x, y);
+    public Point(Point copy) {
+        set(copy.x, copy.y);
+    }
+
+    public Point(double x, double y) {
+        set(x, y);
+    }
+
+    public void set(double x, double y) {
+        this.x = x;
+        this.y = y;
     }
 
     @Override

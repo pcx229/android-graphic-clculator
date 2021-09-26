@@ -20,7 +20,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
-        viewModel.init();
 
         setContentView(R.layout.activity_main);
 
@@ -35,9 +34,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStop() {
+    protected void onPause() {
         viewModel.saveSettings();
-
-        super.onStop();
+        viewModel.saveExpressions();
+        super.onPause();
     }
 }

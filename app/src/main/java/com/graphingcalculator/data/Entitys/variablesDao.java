@@ -18,7 +18,7 @@ public interface variablesDao {
     @Query("SELECT * FROM variables")
     LiveData<List<variable>> getAllLiveData();
 
-    @Query("SELECT Max(arrangement) FROM variables")
+    @Query("SELECT IFNULL(MAX(arrangement), 0) FROM variables")
     Long getMaxIndex();
 
     @Insert
@@ -44,4 +44,7 @@ public interface variablesDao {
 
     @Delete
     void delete(variable v);
+
+    @Query("DELETE FROM variables")
+    void deleteAll();
 }

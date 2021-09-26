@@ -1,5 +1,7 @@
 package com.graphingcalculator;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -30,8 +32,11 @@ import java.util.regex.PatternSyntaxException;
 
 public class ExpressionViewHolder extends RecyclerView.ViewHolder {
     private View mView;
+
     private expression exp;
+
     private ExpressionOptionsChangesListener mChangesListener;
+
     private EditText editMathExpressionText;
     private boolean isEquationVisible;
     private Button equationVisibleColorButton;
@@ -42,6 +47,7 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
     private SeekBar changeVariableValueInRangeSeekBar;
     private boolean isVariableAnimated;
     private ImageButton animateVariableValuesButton;
+    private Animator.AnimatorListener variableAnimationListener;
 
     private void setEquationVisible(boolean visible) {
         isEquationVisible = visible;
@@ -64,12 +70,28 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
             resId = R.drawable.ic_baseline_play_circle_outline_24;
         }
         animateVariableValuesButton.setImageIcon(Icon.createWithResource(mView.getContext(), resId));
+
+        if(animated) {
+            editMathExpressionText.setEnabled(false);
+            startVariableRangeEditText.setEnabled(false);
+            endVariableRangeEditText.setEnabled(false);
+            changeVariableValueInRangeSeekBar.setEnabled(false);
+        } else {
+            editMathExpressionText.setEnabled(true);
+            startVariableRangeEditText.setEnabled(true);
+            endVariableRangeEditText.setEnabled(true);
+            changeVariableValueInRangeSeekBar.setEnabled(true);
+        }
     }
 
     private void setVariableProgress(double start, double end, double progress) {
         startVariableRangeEditText.setText(String.format("%.3f", start));
         endVariableRangeEditText.setText(String.format("%.3f", end));
         changeVariableValueInRangeSeekBar.setProgress((int) (progress*changeVariableValueInRangeSeekBar.getMax()));
+    }
+
+    private void setVariableProgress(variable var) {
+        setVariableProgress(var.getRangeStart(), var.getRangeEnd(), var.getValueProgress());
     }
 
     public ExpressionViewHolder(View view, ExpressionOptionsChangesListener changesListener) {
@@ -103,8 +125,9 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
             if ((actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_DOWN)
                     || actionId == EditorInfo.IME_ACTION_DONE) {
                 saveChangesMathExpressionButton.performClick();
+                return true;
             }
-            return true;
+            return false;
         });
 
         equationVisibleColorButton = (Button) view.findViewById(R.id.EquationVisibleColorButton);
@@ -133,16 +156,14 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
 
         removeMathExpressionButton = (ImageButton) view.findViewById(R.id.RemoveMathExpressionButton);
         removeMathExpressionButton.setOnClickListener(_view -> {
-            mChangesListener.removeExpression(exp);
+            mChangesListener.deleteExpression(exp);
         });
 
         saveChangesMathExpressionButton = (ImageButton) view.findViewById(R.id.SaveChangesMathExpressionButton);
         saveChangesMathExpressionButton.setOnClickListener(_view -> {
             try {
-                mChangesListener.changeExpression(exp, editMathExpressionText.getText().toString());
-                saveChangesMathExpressionButton.setVisibility(View.GONE);
-                init(exp);
                 editMathExpressionText.clearFocus();
+                mChangesListener.changeExpression(exp, editMathExpressionText.getText().toString());
                 InputMethodManager imm = (InputMethodManager) mView.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(editMathExpressionText.getWindowToken(), 0);
             } catch(PatternSyntaxException e) {
@@ -159,7 +180,6 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
 
             @Override
             public boolean onEditorAction(TextView textView, int actionId, KeyEvent event) {
-
                 double start = Double.parseDouble(startVariableRangeEditText.getText().toString()),
                         end = Double.parseDouble(endVariableRangeEditText.getText().toString());
                 if(start >= end) {
@@ -169,9 +189,8 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
                     changeVariableValueInRangeSeekBar.setActivated(false);
                 } else {
                     mChangesListener.changeVariableRange(exp, start, end);
-                    variable o = (variable) exp;
-                    setVariableProgress(o.getRangeStart(), o.getRangeEnd(), o.getValueProgress());
-                    editMathExpressionText.setText(o.getExpression());
+                    setVariableProgress((variable) exp);
+                    editMathExpressionText.setText(exp.getExpression());
                     startVariableRangeEditText.clearFocus();
                     endVariableRangeEditText.clearFocus();
                 }
@@ -236,9 +255,20 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
             double step = (i.getRangeEnd() - i.getRangeStart()) / changeVariableValueInRangeSeekBar.getMax();
             mChangesListener.changeAnimateVariableStatus(exp, isVariableAnimated, step, variable.ANIMATION_MODE.BACK_AND_FORTH);
         });
+        variableAnimationListener = new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+                super.onAnimationRepeat(animation);
+                if(exp instanceof variable && ((variable) exp).isAnimated()) {
+                    editMathExpressionText.setText(exp.getExpression());
+                    setVariableProgress((variable)exp);
+                }
+            }
+        };
+        mChangesListener.addVariablesAnimationListener(variableAnimationListener);
     }
 
-    public void init(expression exp) {
+    public void onInitialized(expression exp) {
         this.exp = exp;
         // reset
         variableRangeOptionsView.setVisibility(View.GONE);
@@ -254,12 +284,24 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
         } else if(exp instanceof variable) {
             variable o = (variable) exp;
             variableRangeOptionsView.setVisibility(View.VISIBLE);
-            setVariableProgress(o.getRangeStart(), o.getRangeEnd(), o.getValueProgress());
+            setVariableProgress(o);
             setVariableAnimated(o.isAnimated());
         }
     }
 
-    public void update(expression exp, Bundle changes) {
-        init(exp);
+    public void onUpdated(expression exp, Bundle changes) {
+        onInitialized(exp);
+    }
+
+    public void onAttached() {
+
+    }
+
+    public void onRecycled() {
+
+    }
+
+    public void onDetached() {
+        mChangesListener.removeVariablesAnimationListener(variableAnimationListener);
     }
 }

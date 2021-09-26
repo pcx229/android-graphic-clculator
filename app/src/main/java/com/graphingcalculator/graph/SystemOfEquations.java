@@ -1,8 +1,9 @@
 package com.graphingcalculator.graph;
 
-import com.udojava.evalex.Expression;
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
+import net.objecthunter.exp4j.function.Function;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,85 +11,89 @@ import java.util.Map;
 
 public class SystemOfEquations {
 
-    private List<Object> stack;
+    private List<Equation> equations;
+    private Map<String, Double> variables;
+    private Map<String, Function> functions;
 
     public SystemOfEquations() {
-        stack = new ArrayList<>();
+        equations = new ArrayList<>();
+        variables = new HashMap<>();
+        functions = new HashMap<>();
     }
 
-    public void addVariable(Variable var) {
-        stack.add(var);
+    public Map<String, Double> getVariables() {
+        return variables;
     }
 
-    public List<Variable> getVariables() {
-        List<Variable> list = new ArrayList<>();
-        for(Object i : stack) {
-            if(i instanceof Variable) {
-                list.add((Variable)i);
-            }
-        }
-        return list;
+    public void addVariable(String name, double value) {
+        variables.put(name, value);
     }
 
-    public void removeVariable(Variable var) {
-        stack.remove(var);
+    public void setVariable(String name, double value) {
+        variables.put(name, value);
     }
 
-    public void addFunction(Function func) {
-        stack.add(func);
-    }
-
-    public void removeFunction(Function func) {
-        stack.remove(func);
-    }
-
-    public List<Function> getFunctions() {
-        List<Function> list = new ArrayList<>();
-        for(Object i : stack) {
-            if(i instanceof Function) {
-                list.add((Function)i);
-            }
-        }
-        return list;
-    }
-
-    public void addEquation(Equation eq) {
-        stack.add(eq);
-    }
-
-    public void removeEquation(Equation eq) {
-        stack.remove(eq);
-    }
-
-    public List<Equation> getEquation() {
-        List<Equation> list = new ArrayList<>();
-        for(Object i : stack) {
-            if(i instanceof Equation) {
-                list.add((Equation)i);
-            }
-        }
-        return list;
+    public void deleteVariable(String name) {
+        variables.remove(name);
     }
 
     public boolean hasVariable(String name) {
-        for(Variable v : getVariables()) {
-            if(v.getName().equals(name)) {
-                return true;
+        return variables.containsKey(name);
+    }
+
+    public Map<String, Function> getFunctions() {
+        return functions;
+    }
+
+    public void addFunction(String name, List<String> arguments, String body) {
+        functions.put(name, new Function(name, arguments.size()) {
+            Expression exp = new ExpressionBuilder(body).variables(arguments.toArray(new String[arguments.size()])).build();
+            @Override
+            public double apply(double... args) {
+                int i=0;
+                for(String arg : arguments) {
+                    exp.setVariable(arg, args[i++]);
+                }
+                return exp.evaluate();
             }
-        }
-        return false;
+        });
+    }
+
+    public void deleteFunction(String name) {
+        functions.remove(name);
     }
 
     public boolean hasFunction(String name) {
-        for(Function f : getFunctions()) {
-            if(f.getName().equals(name)) {
-                return true;
-            }
-        }
-        return false;
+        return functions.containsKey(name);
     }
 
-    public Map<Equation, Point[]> calculateRange(Range range, int n) {
+    public List<Equation> getEquations() {
+        return equations;
+    }
+
+    public void addEquation(Equation eq) {
+        equations.add(eq);
+    }
+
+    public void deleteEquation(Equation eq) {
+        equations.remove(eq);
+    }
+
+    public boolean hasEquation(Equation eq) {
+        return equations.contains(eq);
+    }
+
+    class Renderer {
+        public Renderer() {
+
+        }
+    }
+
+    public Renderer build() {
+        return new Renderer();
+    }
+
+    public Map<Equation, Point[]> calculateRange(Range range, int n) {/*
         Map<Equation, Point[]> result = new HashMap<>();
         for(Object i : stack) {
             if(i instanceof Equation) {
@@ -122,6 +127,7 @@ public class SystemOfEquations {
                 result.put(eq, points);
             }
         }
-        return result;
+        return result;*/
+        return null;
     }
 }

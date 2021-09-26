@@ -18,7 +18,7 @@ public interface functionsDao {
     @Query("SELECT * FROM functions")
     LiveData<List<function>> getAllLiveData();
 
-    @Query("SELECT Max(arrangement) FROM functions")
+    @Query("SELECT IFNULL(MAX(arrangement), 0) FROM functions")
     Long getMaxIndex();
 
     @Insert
@@ -44,4 +44,7 @@ public interface functionsDao {
 
     @Delete
     void delete(function f);
+
+    @Query("DELETE FROM functions")
+    void deleteAll();
 }

@@ -5,19 +5,15 @@ import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 
 import com.graphingcalculator.R;
-
-import java.util.Map;
 
 /**
  * default implementation:
@@ -49,12 +45,14 @@ public class MathGraph extends View {
     public final static int DEFAULT_AXIS_COLOR = Color.BLACK;
     private int gridColor;
     public final static int DEFAULT_GRID_COLOR = Color.LTGRAY;
-    private int gridBlockSize;
-    public final static float DEFAULT_BLOCK_SIZE_DP = 50f;
-    public final static float DEFAULT_AXIS_GRID_LINE_WIDTH_DP = 2f;
+    private float gridBlockSize;
+    public final static float DEFAULT_BLOCK_SIZE_DP = 100f;
+    public final static float DEFAULT_AXIS_GRID_LINE_WIDTH_DP = 3f;
+    private float axisAndGridLineWidth;
     public final static float DEFAULT_FUNCTION_LINE_WIDTH_DP = 5f;
-    private int fontSize;
-    public final static float DEFAULT_FONT_SIZE_SP = 20f;
+    private float functionLineWidth;
+    private float fontSize;
+    public final static float DEFAULT_FONT_SIZE_SP = 40f;
     private int fontColor;
     public final static int DEFAULT_FONT_COLOR = Color.BLACK;
     private Typeface fontFamily;
@@ -65,11 +63,14 @@ public class MathGraph extends View {
     private static final double MAX_RANGE_UNTIL_CIRCLE_HIGHLIGHT = 1000.0,
             MIN_RANGE_UNTIL_CIRCLE_HIGHLIGHT = 0.01;
     public final static int CENTER_POINT_HIGHLIGHT_CIRCLE_SIZE_DP = 3;
+    private int centerPointHighlightCircleSize;
     public final static int CENTER_POINT_HIGHLIGHT_CIRCLE_COLOR_PRIMARY = Color.BLACK;
     public final static int CENTER_POINT_HIGHLIGHT_TEXT_BACKGROUND_COLOR = Color.WHITE;
-
+    public final static float AXIS_DIRECTION_ARROW_SIZE_DP = 30f;
+    private float axisDirectionArrowSize;
 
     private double scaleX, scaleY, centerX, centerY;
+    private Range range = new Range();;
     private int width, height;
     private boolean initializedViewSize;
 
@@ -98,16 +99,20 @@ public class MathGraph extends View {
             axisColor = a.getColor(R.styleable.MathGraph_axisColor, DEFAULT_AXIS_COLOR);
             showGrid = a.getBoolean(R.styleable.MathGraph_showGrid, true);
             gridColor = a.getColor(R.styleable.MathGraph_gridColor, DEFAULT_GRID_COLOR);
-            gridBlockSize = a.getDimensionPixelSize(R.styleable.MathGraph_gridBlockSize, (int) (getResources().getDisplayMetrics().density *  DEFAULT_BLOCK_SIZE_DP));
+            gridBlockSize = a.getDimension(R.styleable.MathGraph_gridBlockSize, DEFAULT_BLOCK_SIZE_DP);
             dataPointPerEquation = a.getInteger(R.styleable.MathGraph_dataPointPerEquation, DEFAULT_DATA_POINTS_PER_EQUATION);
 
             backgroundColor = a.getColor(R.styleable.MathGraph_android_textColor, DEFAULT_BACKGROUND_COLOR);
             fontFamily = a.getFont(R.styleable.MathGraph_android_fontFamily);
-            fontSize = a.getDimensionPixelSize(R.styleable.MathGraph_android_textSize, (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, DEFAULT_FONT_SIZE_SP, getResources().getDisplayMetrics()));
+            fontSize = a.getDimension(R.styleable.MathGraph_android_textSize, DEFAULT_FONT_SIZE_SP);
             fontColor = a.getColor(R.styleable.MathGraph_android_textColor, DEFAULT_FONT_COLOR);
         } finally {
             a.recycle();
         }
+        axisAndGridLineWidth =  DEFAULT_AXIS_GRID_LINE_WIDTH_DP;
+        functionLineWidth =  DEFAULT_FUNCTION_LINE_WIDTH_DP;
+        centerPointHighlightCircleSize = CENTER_POINT_HIGHLIGHT_CIRCLE_SIZE_DP;
+        axisDirectionArrowSize = AXIS_DIRECTION_ARROW_SIZE_DP;
 
         // listen to changes in container size
         initializedViewSize = false;
@@ -126,17 +131,22 @@ public class MathGraph extends View {
         dragDetector = new GraphDragListener();
     }
 
+    private void updateRangeStartEnd() {
+        double dx = (width*scaleX)/2,
+                dy = (height*scaleY)/2;
+        range.set(centerX-dx, centerX+dx, centerY-dy, centerY+dy);
+    }
+
+    public Range getRangeStartEnd() {
+        return new Range(range);
+    }
+
     public void setRangeByCenterPoint(float centerX, float centerY, float scaleX, float scaleY) {
-        if(!initializedViewSize) {
-            post(() -> {
-                setRangeByCenterPoint(centerX, centerY, scaleX, scaleY);
-            });
-            return;
-        }
         this.centerX = centerX;
         this.centerY = centerY;
         this.scaleX = scaleX;
         this.scaleY = scaleY;
+        updateRangeStartEnd();
         invalidate();
     }
 
@@ -192,14 +202,6 @@ public class MathGraph extends View {
                 break;
         }
         setRangeByStartEnd(startX, endX, startY, endY);
-    }
-
-    public Range getRangeStartEnd() {
-        double numbersXRange = width*scaleX,
-                numbersYRange = height*scaleY;
-        double startXRange = centerX-(numbersXRange/2),
-                startYRange = centerY-(numbersYRange/2);
-        return new Range(startXRange, startXRange+numbersXRange, startYRange, startYRange+numbersYRange);
     }
 
     public boolean isScalable() {
@@ -263,7 +265,7 @@ public class MathGraph extends View {
         invalidate();
     }
 
-    public int getGridBlockSize() {
+    public float getGridBlockSize() {
         return gridBlockSize;
     }
 
@@ -272,7 +274,7 @@ public class MathGraph extends View {
         invalidate();
     }
 
-    public int getFontSize() {
+    public float getFontSize() {
         return fontSize;
     }
 
@@ -403,6 +405,7 @@ public class MathGraph extends View {
             centerX += (focusScreenX - width/2f) * scaleX * (1/scaleFactorX-1);
             centerY += (focusScreenY - height/2f) * scaleY * (1/scaleFactorY-1);
         }
+        updateRangeStartEnd();
     }
 
     private void move(double fromCenterX, double fromCenterY, float amountScreenX, float amountScreenY) {
@@ -411,6 +414,7 @@ public class MathGraph extends View {
         }
         centerX = fromCenterX - amountScreenX * scaleX;
         centerY = fromCenterY + amountScreenY * scaleY;
+        updateRangeStartEnd();
     }
 
     public interface OnRangeChangesListener {
@@ -456,6 +460,13 @@ public class MathGraph extends View {
         return point;
     }
 
+    private Paint paint = new Paint();
+    private TextPaint textPaint = new TextPaint();
+    private Rect numberTextSize = new Rect();
+    private Point centerAxis = new Point();
+    private Point gridNumberX = new Point(),
+            gridNumberY = new Point();
+
     protected void onDraw(Canvas canvas) {
 
         // TODO: move calculating equation to background thread to prevent stuttering
@@ -466,13 +477,8 @@ public class MathGraph extends View {
             return;
         }
 
-        Paint paint = new Paint();
-        TextPaint textPaint = new TextPaint();
-        Rect numberTextSize = new Rect();
-        Range range = getRangeStartEnd();
-        int axisAndGridLineWidth =  (int) (getResources().getDisplayMetrics().density *  DEFAULT_AXIS_GRID_LINE_WIDTH_DP);
-        int functionLineWidth =  (int) (getResources().getDisplayMetrics().density *  DEFAULT_FUNCTION_LINE_WIDTH_DP);
-        int centerPointHighlightCircleSize = (int) (getResources().getDisplayMetrics().density *  CENTER_POINT_HIGHLIGHT_CIRCLE_SIZE_DP);
+        // setup canvas
+        canvas.setDensity((int) getResources().getDisplayMetrics().density);
 
         // paint background
         paint.reset();
@@ -491,15 +497,15 @@ public class MathGraph extends View {
             paint.setColor(gridColor);
             paint.setStrokeWidth(axisAndGridLineWidth);
             paint.setStyle(Paint.Style.STROKE);
-            Point g = new Point(0, 0);
-            mapScreenPointToGraph(g);
-            g.x = Math.floor(g.x/gridStepX)*gridStepX;
-            g.y = Math.floor(g.y/gridStepY)*gridStepY;
-            mapGraphPointToScreen(g);
-            for(double i=g.x; i < width; i+=gridStepXPixels) {
+            centerAxis.set(0, 0);
+            mapScreenPointToGraph(centerAxis);
+            centerAxis.x = Math.floor(centerAxis.x/gridStepX)*gridStepX;
+            centerAxis.y = Math.floor(centerAxis.y/gridStepY)*gridStepY;
+            mapGraphPointToScreen(centerAxis);
+            for(double i=centerAxis.x; i < width; i+=gridStepXPixels) {
                 canvas.drawLine((float)i, 0, (float)i, height, paint);
             }
-            for(double i=g.y; i < height; i+=gridStepYPixels) {
+            for(double i=centerAxis.y; i < height; i+=gridStepYPixels) {
                 canvas.drawLine(0, (float)i, width, (float)i, paint);
             }
         }
@@ -508,6 +514,7 @@ public class MathGraph extends View {
         paint.reset();
         paint.setStrokeWidth(functionLineWidth);
         paint.setStyle(Paint.Style.STROKE);
+        /*
         if(equations != null) {
             for(Map.Entry<Equation, Point[]> entry : equations.calculateRange(range, dataPointPerEquation).entrySet()) {
                 Equation eq = entry.getKey();
@@ -528,25 +535,23 @@ public class MathGraph extends View {
                 path.close();
                 canvas.drawPath(path, paint);
             }
-        }
+        }*/
 
         // axis
         if(showAxis) {
             paint.reset();
-            paint.setStrokeWidth(axisAndGridLineWidth);
             paint.setStyle(Paint.Style.STROKE);
             paint.setColor(axisColor);
-            Point axis = new Point(0, 0);
-            mapGraphPointToScreen(axis);
-            canvas.drawLine((float)axis.x, 0, (float)axis.x, height, paint);
-            float[] arrowTop = new float[]{ (float)axis.x-15, 0+20, (float)axis.x, 0+2, (float)axis.x, 0+2, (float)axis.x+15, 0+20 };
-            paint.setStrokeWidth(axisAndGridLineWidth*1.5f);
-            canvas.drawLines(arrowTop, paint);
+            centerAxis.set(0, 0);
+            mapGraphPointToScreen(centerAxis);
             paint.setStrokeWidth(axisAndGridLineWidth);
-            canvas.drawLine(0,(float)axis.y, width, (float)axis.y, paint);
-            float[] arrowBottom = new float[]{ width-20, (float)axis.y+15, width-2, (float)axis.y, width-2, (float)axis.y, width-20, (float)axis.y-15 };
+            canvas.drawLine((float)centerAxis.x, 0, (float)centerAxis.x, height, paint);
+            canvas.drawLine(0,(float)centerAxis.y, width, (float)centerAxis.y, paint);
             paint.setStrokeWidth(axisAndGridLineWidth*1.5f);
-            canvas.drawLines(arrowBottom, paint);
+            canvas.drawLine((float)centerAxis.x-axisDirectionArrowSize*0.6f, axisDirectionArrowSize, (float)centerAxis.x, 2, paint);
+            canvas.drawLine((float)centerAxis.x, 2, (float)centerAxis.x+axisDirectionArrowSize*0.6f, axisDirectionArrowSize, paint);
+            canvas.drawLine(width-axisDirectionArrowSize, (float)centerAxis.y+axisDirectionArrowSize*0.6f, width-2, (float)centerAxis.y, paint);
+            canvas.drawLine((float)width-2, (float)centerAxis.y, width-axisDirectionArrowSize, (float)centerAxis.y-axisDirectionArrowSize*0.6f, paint);
         }
 
         // grid numbers
@@ -579,33 +584,33 @@ public class MathGraph extends View {
             } else {
                 double leftX = Math.floor((centerX-width/2f*scaleX)/gridStepX)*gridStepX,
                         bottomY = Math.floor((centerY-height/2f*scaleY)/gridStepY)*gridStepY;
-                Point x = new Point(leftX, 0),
-                        y = new Point(0, bottomY);
-                mapGraphPointToScreen(x);
-                mapGraphPointToScreen(y);
-                if(x.y > height) {
-                    x.y = height;
-                } else if(x.y < 0) {
-                    x.y = 0;
+                gridNumberX.set(leftX, 0);
+                gridNumberY.set(0, bottomY);
+                mapGraphPointToScreen(gridNumberX);
+                mapGraphPointToScreen(gridNumberY);
+                if(gridNumberX.y > height) {
+                    gridNumberX.y = height;
+                } else if(gridNumberX.y < 0) {
+                    gridNumberX.y = 0;
                 }
-                if(y.x > width) {
-                    y.x = width;
-                } else if(y.x < 0) {
-                    y.x = 0;
+                if(gridNumberY.x > width) {
+                    gridNumberY.x = width;
+                } else if(gridNumberY.x < 0) {
+                    gridNumberY.x = 0;
                 }
-                for(double i=x.x, j=leftX; i < width; i+=gridStepXPixels, j+=gridStepX) {
-                    canvas.drawLine((float)i, (float)x.y+10, (float)i, (float)x.y-10, paint);
+                for(double i=gridNumberX.x, j=leftX; i < width; i+=gridStepXPixels, j+=gridStepX) {
+                    canvas.drawLine((float)i, (float)gridNumberX.y+10, (float)i, (float)gridNumberX.y-10, paint);
                     double n = (int)(j*100)/100.0;
                     String numberText = (Math.abs(n - (int)n) < 1E-4) ? Integer.toString((int)n) : Double.toString(n);
                     textPaint.getTextBounds(numberText, 0, numberText.length(), numberTextSize);
-                    canvas.drawText(numberText, (float) (((n == 0) ? 30 : 0) + i-numberTextSize.width()/2.0), (float) (x.y+((x.y <= height/2.0) ? numberTextSize.height()+35.0 : -35.0)), textPaint);
+                    canvas.drawText(numberText, (float) (((n == 0) ? 30 : 0) + i-numberTextSize.width()/2.0), (float) (gridNumberX.y+((gridNumberX.y <= height/2.0) ? numberTextSize.height()+35.0 : -35.0)), textPaint);
                 }
-                for(double i=y.y, j=bottomY; i > 0; i-=gridStepYPixels, j+=gridStepY) {
-                    canvas.drawLine((float)y.x+10, (float)i, (float)y.x-10, (float)i, paint);
+                for(double i=gridNumberY.y, j=bottomY; i > 0; i-=gridStepYPixels, j+=gridStepY) {
+                    canvas.drawLine((float)gridNumberY.x+10, (float)i, (float)gridNumberY.x-10, (float)i, paint);
                     double n = (int)(j*100)/100.0;
                     String numberText = (Math.abs(n - (int)n) < 1E-4) ? Integer.toString((int)n) : Double.toString(n);
                     textPaint.getTextBounds(numberText, 0, numberText.length(), numberTextSize);
-                    canvas.drawText((n == 0) ? "" : numberText, (float) (y.x+((y.x <= width/2.0) ? 35.0 : -numberTextSize.width()-35.0)), (float) (i+numberTextSize.height()/2.0), textPaint);
+                    canvas.drawText((n == 0) ? "" : numberText, (float) (gridNumberY.x+((gridNumberY.x <= width/2.0) ? 35.0 : -numberTextSize.width()-35.0)), (float) (i+numberTextSize.height()/2.0), textPaint);
                 }
             }
         }

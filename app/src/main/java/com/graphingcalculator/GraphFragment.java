@@ -54,7 +54,7 @@ public class GraphFragment extends Fragment {
             navController.navigate(R.id.action_GraphFragment_to_EquationsFragment);
         });
         resetNavButton.setOnClickListener(_view -> {
-            viewModel.resetRange();
+            updateGraphRange(viewModel.resetRange());
         });
         settingsNavButton.setOnClickListener(_view -> {
             navController.navigate(R.id.action_GraphFragment_to_SettingsFragment);
@@ -76,11 +76,8 @@ public class GraphFragment extends Fragment {
                 viewModel.getSettingsUpdates().removeObserver(this);
             }
         });
-        viewModel.setOnResetRangeListener(range -> {
-            updateGraphRange(range);
-        });
         viewModel.getEquationsUpdates().observe(getActivity(), equations -> {
-            graph.setEquations(equations);
+            //graph.setEquations(equations);
         });
     }
 }

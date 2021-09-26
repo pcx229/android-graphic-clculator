@@ -1,5 +1,6 @@
 package com.graphingcalculator;
 
+import android.animation.Animator;
 import android.graphics.Color;
 
 import com.graphingcalculator.data.Entitys.expression;
@@ -9,7 +10,7 @@ public interface ExpressionOptionsChangesListener {
 
     void changeEquationColor(expression exp, Color color);
 
-    void removeExpression(expression exp);
+    void deleteExpression(expression exp);
 
     void changeEquationVisibility(expression exp, boolean visible);
 
@@ -22,4 +23,8 @@ public interface ExpressionOptionsChangesListener {
     void changeVariableValueSave(expression exp);
 
     void changeAnimateVariableStatus(expression exp, boolean isAnimated, double step, variable.ANIMATION_MODE mode);
+
+    void addVariablesAnimationListener(Animator.AnimatorListener listener);
+
+    void removeVariablesAnimationListener(Animator.AnimatorListener listener);
 }

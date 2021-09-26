@@ -26,7 +26,7 @@ public abstract class expression {
 
     @Ignore
     public expression() {
-        this.id = 0;
+        this.id = System.currentTimeMillis();
         this.index = 0;
     }
 

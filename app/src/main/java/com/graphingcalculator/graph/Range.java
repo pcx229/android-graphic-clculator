@@ -3,14 +3,19 @@ package com.graphingcalculator.graph;
 public class Range {
     public double startX, endX, startY, endY;
 
+    public Range() {
+
+    }
+
     public Range(Range copy) {
-        startX = copy.startX;
-        endX = copy.endX;
-        startY = copy.startY;
-        endY = copy.endY;
+        set(copy.startX, copy.endX, copy.startY, copy.endY);
     }
 
     public Range(double startX, double endX, double startY, double endY) {
+        set(startX, endX, startY, endY);
+    }
+
+    public void set(double startX, double endX, double startY, double endY) {
         this.startX = startX;
         this.endX = endX;
         this.startY = startY;
