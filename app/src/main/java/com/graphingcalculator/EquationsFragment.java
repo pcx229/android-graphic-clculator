@@ -102,6 +102,18 @@ public class EquationsFragment extends Fragment {
             public void removeVariablesAnimationListener(Animator.AnimatorListener listener) {
                 viewModel.removeVariablesAnimationListener(listener);
             }
+
+            @Override
+            public void moveExpressionUp(expression exp) {
+                viewModel.moveExpressionUp(exp);
+                equationsRecyclerViewAdapter.moveItemUp(exp);
+            }
+
+            @Override
+            public void moveExpressionDown(expression exp) {
+                viewModel.moveExpressionDown(exp);
+                equationsRecyclerViewAdapter.moveItemDown(exp);
+            }
         });
         equationsRecyclerView.setAdapter(equationsRecyclerViewAdapter);
         equationsRecyclerView.addItemDecoration(new DividerItemDecoration(equationsRecyclerView.getContext(), DividerItemDecoration.VERTICAL));

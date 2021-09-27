@@ -27,4 +27,8 @@ public interface ExpressionOptionsChangesListener {
     void addVariablesAnimationListener(Animator.AnimatorListener listener);
 
     void removeVariablesAnimationListener(Animator.AnimatorListener listener);
+
+    void moveExpressionUp(expression exp);
+
+    void moveExpressionDown(expression exp);
 }

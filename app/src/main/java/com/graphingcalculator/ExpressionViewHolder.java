@@ -38,10 +38,12 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
     private ExpressionOptionsChangesListener mChangesListener;
 
     private EditText editMathExpressionText;
+    private ImageButton removeMathExpressionButton;
+    private ImageButton moveMathExpressionUpButton, moveMathExpressionDownButton;
+
     private boolean isEquationVisible;
     private Button equationVisibleColorButton;
     private ImageButton saveChangesMathExpressionButton;
-    private ImageButton removeMathExpressionButton;
     private View variableRangeOptionsView;
     private EditText startVariableRangeEditText, endVariableRangeEditText;
     private SeekBar changeVariableValueInRangeSeekBar;
@@ -130,6 +132,21 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
             return false;
         });
 
+        removeMathExpressionButton = (ImageButton) view.findViewById(R.id.RemoveMathExpressionButton);
+        removeMathExpressionButton.setOnClickListener(_view -> {
+            mChangesListener.deleteExpression(exp);
+        });
+
+        moveMathExpressionUpButton = (ImageButton) view.findViewById(R.id.MoveMathExpressionUpButton);
+        moveMathExpressionUpButton.setOnClickListener(_view -> {
+            mChangesListener.moveExpressionUp(exp);
+        });
+
+        moveMathExpressionDownButton = (ImageButton) view.findViewById(R.id.MoveMathExpressionDownButton);
+        moveMathExpressionDownButton.setOnClickListener(_view -> {
+            mChangesListener.moveExpressionDown(exp);
+        });
+
         equationVisibleColorButton = (Button) view.findViewById(R.id.EquationVisibleColorButton);
         equationVisibleColorButton.setOnLongClickListener(_view -> {
             ColorPickerDialogBuilder
@@ -152,11 +169,6 @@ public class ExpressionViewHolder extends RecyclerView.ViewHolder {
         equationVisibleColorButton.setOnClickListener(_view -> {
             setEquationVisible(!isEquationVisible);
             mChangesListener.changeEquationVisibility(exp, isEquationVisible);
-        });
-
-        removeMathExpressionButton = (ImageButton) view.findViewById(R.id.RemoveMathExpressionButton);
-        removeMathExpressionButton.setOnClickListener(_view -> {
-            mChangesListener.deleteExpression(exp);
         });
 
         saveChangesMathExpressionButton = (ImageButton) view.findViewById(R.id.SaveChangesMathExpressionButton);

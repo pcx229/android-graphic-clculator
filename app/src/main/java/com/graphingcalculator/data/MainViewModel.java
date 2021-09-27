@@ -196,10 +196,42 @@ public class MainViewModel extends AndroidViewModel {
         variablesAnimator.removeListener(listener);
     }
 
+    public void moveExpressionUp(expression a) {
+        int index = expressions.indexOf(a);
+        if(index > 0) {
+            expressions.remove(index);
+            expression b = expressions.remove(index-1);
+            expressions.add(index-1, a);
+            expressions.add(index, b);
+            long temp = a.getIndex();
+            a.setIndex(b.getIndex());
+            b.setIndex(temp);
+            updateExpressions();
+        }
+    }
+
+    public void moveExpressionDown(expression a) {
+        int index = expressions.indexOf(a);
+        if(index < expressions.size()-1) {
+            expressions.remove(index);
+            expression b = expressions.remove(index);
+            expressions.add(index, a);
+            expressions.add(index, b);
+            long temp = a.getIndex();
+            a.setIndex(b.getIndex());
+            b.setIndex(temp);
+            updateExpressions();
+        }
+    }
+
     public expression addExpression(String text) {
+        System.out.println("create expression");
         expression exp = parseExpression(null, text);
+        System.out.println("expression created - function? " + (exp instanceof function));
         expressions.add(0, exp);
+        System.out.println("update expressions");
         updateExpressions();
+        System.out.println("done");
         return exp;
     }
 
@@ -239,6 +271,42 @@ public class MainViewModel extends AndroidViewModel {
 
         if(pattern.trim().equals("")) {
             throw new PatternSyntaxException("expression is empty", pattern , 0);
+        }
+
+        // function
+        Pattern functionPattern = Pattern.compile("^[ ]*([a-zA-Z][a-zA-Z0-9]*)\\(((?:[ ]*[a-zA-Z][a-zA-Z0-9]*[ ]*,)*(?:[ ]*[a-zA-Z][a-zA-Z0-9]*[ ]*)?)\\)[ ]*=[ ]*(.+)[ ]*$");
+        Matcher functionMatcher = functionPattern.matcher(pattern);
+        if(functionMatcher.matches()) {
+            String name = functionMatcher.group(1);
+            String argumentsString = functionMatcher.group(2);
+            List<String> arguments = new ArrayList<String>();
+            for(String arg : argumentsString.split(",")) {
+                arg = arg.trim();
+                if(!arg.isEmpty()) {
+                    arguments.add(arg);
+                }
+            }
+            String body = functionMatcher.group(3);
+            if(last instanceof function) {
+                ((function) last).setBody(body);
+                ((function) last).setName(name);
+                ((function) last).setArguments(arguments);
+                return last;
+            } else {
+                if(equations.hasFunction(name)) {
+                    throw new IllegalArgumentException("function name already exist");
+                }
+                if(SystemOfEquations.parseFunction(name, arguments, body) == null) {
+                    throw new IllegalArgumentException("invalid function");
+                }
+                function o = new function(name, arguments, body);
+                if(last != null) {
+                    o.setIndex(last.getIndex());
+                } else {
+                    o.setIndex(getExpressionNextIndex());
+                }
+                return o;
+            }
         }
 
         // equation
@@ -287,56 +355,32 @@ public class MainViewModel extends AndroidViewModel {
             }
         }
 
-        // function
-        Pattern functionPattern = Pattern.compile("^[ ]*([a-zA-Z][a-zA-Z0-9]*)\\(((?:[ ]*[a-zA-Z][a-zA-Z0-9]*[ ]*,)*(?:[ ]*[a-zA-Z][a-zA-Z0-9]*[ ]*)?)\\)[ ]*=[ ]*(.+)[ ]*$");
-        Matcher functionMatcher = functionPattern.matcher(pattern);
-        if(functionMatcher.matches()) {
-            String name = functionMatcher.group(1);
-            String argumentsString = functionMatcher.group(2);
-            List<String> arguments = new ArrayList<String>();
-            for(String arg : argumentsString.split(",")) {
-                arg = arg.trim();
-                if(!arg.isEmpty()) {
-                    arguments.add(arg);
-                }
-            }
-            String body = functionMatcher.group(3);
-            if(last instanceof function) {
-                ((function) last).setBody(body);
-                ((function) last).setName(name);
-                ((function) last).setArguments(arguments);
-                return last;
-            } else {
-                if(equations.hasFunction(name)) {
-                    throw new IllegalArgumentException("function name already exist");
-                }
-                function o = new function(name, arguments, body);
-                if(last != null) {
-                    o.setIndex(last.getIndex());
-                } else {
-                    o.setIndex(getExpressionNextIndex());
-                }
-                return o;
-            }
-        }
-
         throw new PatternSyntaxException("syntax error", pattern , 0);
     }
 
     private SystemOfEquations parseSystemOfEquations(List<expression> sys) {
         SystemOfEquations equations = new SystemOfEquations();
+        // variables
+        for(expression i : sys) {
+            if(i instanceof variable) {
+                variable o = (variable) i;
+                equations.addVariable(o.getName(), o.getValue());
+            }
+        }
+        // functions
+        for(expression i : sys) {
+            if(i instanceof function) {
+                function o = (function) i;
+                equations.addFunction(o.getName(), o.getArguments(), o.getBody());
+            }
+        }
+        // equations
         for(expression i : sys) {
             if(i instanceof equation) {
                 equation o = (equation) i;
                 if(o.isVisible()) {
                     equations.addEquation(new Equation(o.getBody(), o.getColor()));
                 }
-            } else if(i instanceof variable) {
-                variable o = (variable) i;
-                equations.addVariable(o.getName(), o.getValue());
-            } else if(i instanceof function) {
-                function o = (function) i;
-                equations.addFunction(o.getName(), o.getArguments(), o.getBody());
             }
         }
         return equations;

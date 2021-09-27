@@ -125,7 +125,11 @@ public class SystemOfEquations {
     }
 
     public void addFunction(String name, List<String> arguments, String body) {
-        functions.put(name, new Function(name, arguments.size()) {
+        functions.put(name, parseFunction(name, arguments, body));
+    }
+
+    public static Function parseFunction(String name, List<String> arguments, String body) {
+        return new Function(name, arguments.size()) {
             Expression exp = new ExpressionBuilder(body).variables(arguments.toArray(new String[arguments.size()])).build();
             @Override
             public double apply(double... args) {
@@ -135,7 +139,7 @@ public class SystemOfEquations {
                 }
                 return exp.evaluate();
             }
-        });
+        };
     }
 
     public void deleteFunction(String name) {
@@ -164,8 +168,6 @@ public class SystemOfEquations {
 
     class Renderer {
 
-        private double[][] dense, xs, ys;
-
         private int width, height;
         private float density;
 
@@ -191,9 +193,14 @@ public class SystemOfEquations {
 
             int calcWidth = (int) (width / (density*3)),
                     calcHeight = (int) (height / (density*3));
-            dense = new double[calcHeight][calcWidth];
-            xs = new double[calcHeight][calcWidth];
-            ys = new double[calcHeight][calcWidth];
+            dense = new float[calcHeight][calcWidth];
+            kernel = new byte[calcHeight][calcWidth];
+            xy = new PointD[calcHeight][calcWidth];
+            for(int i=0;i<calcHeight;i++) {
+                for(int j=0;j<calcWidth;j++) {
+                    xy[i][j] = new PointD();
+                }
+            }
         }
 
         public boolean isSame(int width, int height, float density) {
@@ -238,8 +245,53 @@ public class SystemOfEquations {
             }
         }
 
+        private class PointD {
+            double x, y;
+            void set(PointD p) {
+                x = p.x;
+                y = p.y;
+            }
+        }
+
+        private PointD[][] xy;
+        private float[][] dense;
+        private byte[][] kernel;
+        private PointD temp1 = new PointD(),
+                temp2 = new PointD();
+
+        private void mapPointToScreen(PointD p, Range range) {
+            p.x = width*((p.x-range.startX)/range.getWidth());
+            p.y = height*((range.getHeight()-(p.y-range.startY))/range.getHeight());
+        }
+
+        // calculation intermediate point in a line along the distance
+        private void intermediate(PointD p1, float d1, PointD p2, float d2, PointD result) {
+            double theta = Math.atan2((p2.y - p1.y), (p2.x - p1.x));
+            double distance = Math.sqrt(Math.pow(p1.x-p2.x, 2) + Math.pow(p1.y-p2.y, 2));
+            double progress = Math.abs(d1)/(Math.abs(d1)+Math.abs(d2));
+            result.x = p1.x + (distance*progress)*Math.cos(theta);
+            result.y = p1.y + (distance*progress)*Math.sin(theta);
+        }
+
+        private void line(PointD p11, float d11, PointD p12, float d12, PointD p21, float d21, PointD p22, float d22, Range range, Paint paint, Canvas canvas) {
+            intermediate(p11, d11, p12, d12, temp1);
+            mapPointToScreen(temp1, range);
+            intermediate(p21, d21, p22, d22, temp2);
+            mapPointToScreen(temp2, range);
+            canvas.drawLine((float) (temp1.x), (float) (temp1.y), (float) (temp2.x), (float) (temp2.y), paint);
+        }
+        private void rect(PointD tl, PointD br, Range range, Paint paint, Canvas canvas) {
+            temp1.set(tl);
+            mapPointToScreen(temp1, range);
+            temp2.set(br);
+            mapPointToScreen(temp2, range);
+            canvas.drawRect((float) (temp1.x), (float) (temp1.y), (float) (temp2.x), (float) (temp2.y), paint);
+        }
+
         public void render(Range range, Paint paint, Canvas canvas) {
-            System.out.println("size " + dense[0].length + "-" + dense.length);
+//            System.out.println("size " + dense[0].length + "-" + dense.length);
+            long startTime, endTime;
+            startTime = System.currentTimeMillis();
             double stepX = range.getWidth()/(dense[0].length-1),
                     stepY = range.getHeight()/(dense.length-1);
             // general variables
@@ -252,69 +304,84 @@ public class SystemOfEquations {
             // x, y variables
             Expression expression;
             Equation equation;
-            double value;
             for(Map.Entry<Equation, Expression> exeq : equationsExpressions.entrySet()) {
                 expression = exeq.getValue();
                 equation = exeq.getKey();
                 paint.setColor(equation.getColor());
-                for (double y=range.startY, i=0; y < range.endY; y+=stepY, i++) {
-                    expression.setVariable("y", y);
-                    for(double x=range.startX, j=0; x < range.endX ; x+=stepX, j++) {
-                        expression.setVariable("x", x);
-                        try {
-                            value = expression.evaluate();
-                            dense[(int) i][(int) j] = value;
-                            float screenX = (float)(width*((x-range.startX)/range.getWidth())),
-                                    screenY = (float)(height*((range.getHeight()-(y-range.startY))/range.getHeight()));
-                            xs[(int) i][(int) j] = screenX;
-                            ys[(int) i][(int) j] = screenY;
-                            if(value == 0) {
-                                canvas.drawPoint(screenX, screenY, paint);
-                            }
-                        } catch(Exception e) {}
+                // density
+                {
+                    int i=0, j;
+                    double value = 0;
+                    for (double y=range.startY; y < range.endY; y+=stepY) {
+                        expression.setVariable("y", y);
+                        j=0;
+                        for(double x=range.startX; x < range.endX ; x+=stepX) {
+                            expression.setVariable("x", x);
+                            try { value = expression.evaluate(); } catch(Exception e) {}
+                            dense[i][j] = (float) value;
+                            xy[i][j].x = x;
+                            xy[i][j].y = y;
+                            j++;
+                        }
+                        i++;
                     }
                 }
-                // edge detection
-                for(int i=0;i<dense.length-1;i++) {
-                    for(int j=0;j<dense[0].length-1;j++) {
-                        if(dense[i][j] >= 0 && dense[i][j+1] >= 0 && dense[i+1][j] < 0 && dense[i+1][j+1] < 0) {
-                            canvas.drawLine((float)xs[i][j], (float)ys[i][j], (float)xs[i][j+1], (float)ys[i][j+1], paint);
+                // edge detection - edges kernel type
+                for(int i = 0; i < dense.length - 2; i++) {
+                    for(int j = 0; j < dense[0].length - 2; j++) {
+                        kernel[i][j] = 0x0;
+                        if(dense[i][j] >= 0) {
+                            kernel[i][j] |= 0x1;
                         }
-                        else if(dense[i][j] < 0 && dense[i][j+1] >= 0 && dense[i+1][j] < 0 && dense[i+1][j+1] >= 0) {
-                            canvas.drawLine((float)xs[i][j+1], (float)ys[i][j+1], (float)xs[i+1][j+1], (float)ys[i+1][j+1], paint);
+                        if(dense[i][j+1] >= 0) {
+                            kernel[i][j] |= 0x2;
                         }
-                        else if(dense[i][j] >= 0 && dense[i][j+1] < 0 && dense[i+1][j] >= 0 && dense[i+1][j+1] < 0) {
-                            canvas.drawLine((float)xs[i][j], (float)ys[i][j], (float)xs[i+1][j], (float)ys[i+1][j], paint);
+                        if(dense[i+1][j] >= 0) {
+                            kernel[i][j] |= 0x4;
                         }
-                        else if(dense[i][j] < 0 && dense[i][j+1] < 0 && dense[i+1][j] >= 0 && dense[i+1][j+1] >= 0) {
-                            canvas.drawLine((float)xs[i+1][j], (float)ys[i+1][j], (float)xs[i+1][j+1], (float)ys[i+1][j+1], paint);
+                        if(dense[i+1][j+1] >= 0) {
+                            kernel[i][j] |= 0x8;
                         }
-                        else if(dense[i][j] >= 0 && dense[i][j+1] < 0 && dense[i+1][j] < 0 && dense[i+1][j+1] >= 0) {
-                            canvas.drawLine((float)xs[i][j], (float)ys[i][j], (float)xs[i+1][j+1], (float)ys[i+1][j+1], paint);
+                        if(dense[i][j] == 0 && dense[i][j+1] == 0 && dense[i+1][j] == 0 && dense[i+1][j+1] == 0) {
+                            kernel[i][j] = 0x16;
                         }
-                        else if(dense[i][j] < 0 && dense[i][j+1] >= 0 && dense[i+1][j] >= 0 && dense[i+1][j+1] < 0) {
-                            canvas.drawLine((float)xs[i+1][j], (float)ys[i+1][j], (float)xs[i][j+1], (float)ys[i][j+1], paint);
-                        }
-
-                        else if(dense[i][j] >= 0 && dense[i][j+1] >= 0 && dense[i+1][j] >= 0 && dense[i+1][j+1] < 0) {
-                            canvas.drawLine((float)xs[i][j], (float)ys[i][j], (float)xs[i][j+1], (float)ys[i][j+1], paint);
-                            canvas.drawLine((float)xs[i][j], (float)ys[i][j], (float)xs[i+1][j], (float)ys[i+1][j], paint);
-                        }
-                        else if(dense[i][j] >= 0 && dense[i][j+1] >= 0 && dense[i+1][j] < 0 && dense[i+1][j+1] >= 0) {
-                            canvas.drawLine((float)xs[i][j], (float)ys[i][j], (float)xs[i][j+1], (float)ys[i][j+1], paint);
-                            canvas.drawLine((float)xs[i][j+1], (float)ys[i][j+1], (float)xs[i+1][j+1], (float)ys[i+1][j+1], paint);
-                        }
-                        else if(dense[i][j] >= 0 && dense[i][j+1] < 0 && dense[i+1][j] >= 0 && dense[i+1][j+1] >= 0) {
-                            canvas.drawLine((float)xs[i][j], (float)ys[i][j], (float)xs[i+1][j], (float)ys[i+1][j], paint);
-                            canvas.drawLine((float)xs[i+1][j], (float)ys[i+1][j], (float)xs[i+1][j+1], (float)ys[i+1][j+1], paint);
-                        }
-                        else if(dense[i][j] < 0 && dense[i][j+1] >= 0 && dense[i+1][j] >= 0 && dense[i+1][j+1] >= 0) {
-                            canvas.drawLine((float)xs[i][j+1], (float)ys[i][j+1], (float)xs[i+1][j+1], (float)ys[i+1][j+1], paint);
-                            canvas.drawLine((float)xs[i+1][j], (float)ys[i+1][j], (float)xs[i+1][j+1], (float)ys[i+1][j+1], paint);
+                    }
+                }
+                // lines between edges and fill areas
+                for(int i = 0; i < kernel.length - 2; i++) {
+                    for (int j = 0; j < kernel[0].length - 2; j++) {
+                        switch(kernel[i][j]) {
+                            case (0x1 | 0X2):
+                            case (0x4 | 0X8):
+                                line(xy[i][j], dense[i][j], xy[i+1][j], dense[i+1][j], xy[i][j+1], dense[i][j+1], xy[i+1][j+1], dense[i+1][j+1], range, paint, canvas);
+                                break;
+                            case (0x2 | 0X8):
+                            case (0x1 | 0X4):
+                            case (0x1 | 0X8):
+                            case (0x2 | 0X4):
+                                line(xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], range, paint, canvas);
+                                break;
+                            case (0x1 | 0x2 | 0x4):
+                                line(xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], xy[i][j+1], dense[i][j+1], xy[i+1][j+1], dense[i+1][j+1], range, paint, canvas);
+                                break;
+                            case (0x1 | 0x2 | 0x8):
+                                line(xy[i][j], dense[i][j], xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], xy[i+1][j], dense[i+1][j], range, paint, canvas);
+                                break;
+                            case (0x2 | 0x4 | 0x8):
+                                line(xy[i+1][j], dense[i+1][j], xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i][j], dense[i][j], range, paint, canvas);
+                                break;
+                            case (0x1 | 0x4 | 0x8):
+                                line(xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i+1][j+1], dense[i+1][j+1], xy[i][j+1], dense[i][j+1], range, paint, canvas);
+                                break;
+                            case (0x16):
+                                rect(xy[i][j], xy[i+1][j+1], range, paint, canvas);
+                                break;
                         }
                     }
                 }
             }
+            endTime = System.currentTimeMillis();
+            System.out.println("time " + (endTime - startTime) + " milliseconds");
         }
     }
 

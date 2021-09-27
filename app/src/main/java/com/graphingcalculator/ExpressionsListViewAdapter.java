@@ -90,6 +90,28 @@ public class ExpressionsListViewAdapter extends RecyclerView.Adapter<ExpressionV
         notifyItemChanged(index);
     }
 
+    public void moveItemUp(expression a) {
+        int index = mValues.indexOf(a);
+        if(index > 0) {
+            mValues.remove(index);
+            expression b = mValues.remove(index - 1);
+            mValues.add(index - 1, a);
+            mValues.add(index, b);
+            notifyItemMoved(index, index-1);
+        }
+    }
+
+    public void moveItemDown(expression a) {
+        int index = mValues.indexOf(a);
+        if(index < mValues.size()-1) {
+            mValues.remove(index);
+            expression b = mValues.remove(index);
+            mValues.add(index, a);
+            mValues.add(index, b);
+            notifyItemMoved(index, index+1);
+        }
+    }
+
     public void setItemsUpdates(List<expression> items) {
         DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new ExpressionDiffUtilCallBack(items, mValues));
         diffResult.dispatchUpdatesTo(this);

@@ -43,6 +43,24 @@
             android:background="?android:attr/selectableItemBackground"
             android:src="@drawable/ic_baseline_done_24"
             android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@+id/MoveMathExpressionDownButton"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/MoveMathExpressionDownButton"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:src="@drawable/ic_baseline_arrow_downward_24"
+            app:layout_constraintEnd_toStartOf="@+id/MoveMathExpressionUpButton"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/MoveMathExpressionUpButton"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:src="@drawable/ic_baseline_arrow_upward_24"
             app:layout_constraintEnd_toStartOf="@+id/RemoveMathExpressionButton"
             app:layout_constraintTop_toTopOf="parent" />
 
