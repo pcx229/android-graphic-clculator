@@ -309,26 +309,6 @@ public class MainViewModel extends AndroidViewModel {
             }
         }
 
-        // equation
-        Pattern equationPattern = Pattern.compile("^[ ]*(.+)[ ]*(=|>=|<=|>|<)[ ]*(.+)[ ]*$");
-        Matcher equationMatcher = equationPattern.matcher(pattern);
-        if(equationMatcher.matches()) {
-            String text = equationMatcher.group(1).trim() + " " + equationMatcher.group(2) + " " + equationMatcher.group(3).trim();
-            if(last instanceof equation) {
-                ((equation) last).setBody(text);
-                return last;
-            } else {
-                Color color = Color.valueOf(getRandomColor());
-                equation o = new equation(text, color);
-                if(last != null) {
-                    o.setIndex(last.getIndex());
-                } else {
-                    o.setIndex(getExpressionNextIndex());
-                }
-                return o;
-            }
-        }
-
         // variable
         Pattern variablePattern = Pattern.compile("^[ ]*([a-zA-Z][a-zA-Z0-9]*)[ ]*=[ ]*([-]?\\d+(\\.\\d+)?)[ ]*$");
         Matcher variableMatcher = variablePattern.matcher(pattern);
@@ -352,6 +332,30 @@ public class MainViewModel extends AndroidViewModel {
                     o.setIndex(getExpressionNextIndex());
                 }
                 return o;
+            }
+        }
+
+        // equation
+        Pattern equationPattern = Pattern.compile("(>=|<=|=|>|<)");
+        Matcher equationMatcher = equationPattern.matcher(pattern);
+        if(equationMatcher.find()) {
+            String type = equationMatcher.group(1);
+            String[] parts = pattern.split(type);
+            if(parts.length == 2) {
+                String text = parts[0].trim() + " " + type + " " + parts[1].trim();
+                if(last instanceof equation) {
+                    ((equation) last).setBody(text);
+                    return last;
+                } else {
+                    Color color = Color.valueOf(getRandomColor());
+                    equation o = new equation(text, color);
+                    if(last != null) {
+                        o.setIndex(last.getIndex());
+                    } else {
+                        o.setIndex(getExpressionNextIndex());
+                    }
+                    return o;
+                }
             }
         }
 
