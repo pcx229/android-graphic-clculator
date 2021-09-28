@@ -362,15 +362,19 @@ public class SystemOfEquations {
                                 line(xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], range, paint, canvas);
                                 break;
                             case (0x1 | 0x2 | 0x4):
+                            case (0x8):
                                 line(xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], xy[i][j+1], dense[i][j+1], xy[i+1][j+1], dense[i+1][j+1], range, paint, canvas);
                                 break;
                             case (0x1 | 0x2 | 0x8):
+                            case (0x4):
                                 line(xy[i][j], dense[i][j], xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], xy[i+1][j], dense[i+1][j], range, paint, canvas);
                                 break;
                             case (0x2 | 0x4 | 0x8):
+                            case (0x1):
                                 line(xy[i+1][j], dense[i+1][j], xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i][j], dense[i][j], range, paint, canvas);
                                 break;
                             case (0x1 | 0x4 | 0x8):
+                            case (0x2):
                                 line(xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i+1][j+1], dense[i+1][j+1], xy[i][j+1], dense[i][j+1], range, paint, canvas);
                                 break;
                             case (0x16):
