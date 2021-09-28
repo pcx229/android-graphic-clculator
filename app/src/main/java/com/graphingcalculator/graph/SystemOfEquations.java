@@ -168,16 +168,25 @@ public class SystemOfEquations {
 
     class Renderer {
 
-        private int width, height;
-        private float density;
+        private int screenWidth, screenHeight;
+        private float screenDensity;
 
         private Map<Equation, Expression> equationsExpressions;
 
-        public Renderer(int width, int height, float density) {
-            this.width = width;
-            this.height = height;
-            this.density = density;
+        private Range range;
+
+        private Path pathX;
+
+        private Point[][] xy;
+        private Path pathXY;
+
+        public Renderer(int screenWidth, int screenHeight, float screenDensity) {
+            this.screenWidth = screenWidth;
+            this.screenHeight = screenHeight;
+            this.screenDensity = screenDensity;
             equationsExpressions = new HashMap<>();
+            pathX = new Path();
+            pathXY = new Path();
             List<Function> functionsList = new ArrayList<>(functions.values());
             Set<String> variablesSet = new HashSet<>(variables.keySet());
             variablesSet.add("y");
@@ -191,26 +200,26 @@ public class SystemOfEquations {
                 equationsExpressions.put(equation, expression);
             }
 
-            int calcWidth = (int) (width / (density*3)),
-                    calcHeight = (int) (height / (density*3));
-            dense = new float[calcHeight][calcWidth];
-            kernel = new byte[calcHeight][calcWidth];
-            xy = new PointD[calcHeight][calcWidth];
+            int calcWidth = (int) (screenWidth / (screenDensity *3)),
+                    calcHeight = (int) (screenHeight / (screenDensity *3));
+            xy = new Point[calcHeight][calcWidth];
             for(int i=0;i<calcHeight;i++) {
                 for(int j=0;j<calcWidth;j++) {
-                    xy[i][j] = new PointD();
+                    xy[i][j] = new Point();
                 }
             }
         }
 
-        public boolean isSame(int width, int height, float density) {
-            return this.width == width && this.height == height && this.density == density;
+        public boolean isScreenParams(int width, int height, float density) {
+            return this.screenWidth == width && this.screenHeight == height && this.screenDensity == density;
         }
 
-        private Path path = new Path();
+        public void setRange(Range range) {
+            this.range = range;
+        }
 
-        public void renderX(Range range, Paint paint, Canvas canvas) {
-            double stepX = range.getWidth()/((width / (density*3))-1);
+        public void renderX(Paint paint, Canvas canvas) {
+            double stepX = range.getWidth()/((screenWidth / (screenDensity *3))-1);
             // general variables
             for(Map.Entry<Equation, Expression> i : equationsExpressions.entrySet()) {
                 Expression expression = i.getValue();
@@ -225,75 +234,178 @@ public class SystemOfEquations {
                 expression = exeq.getValue();
                 equation = exeq.getKey();
                 paint.setColor(equation.getColor());
-                path.reset();
+                pathX.reset();
                 for(double x=range.startX, lastX=Double.NaN, y=0, lastY=0; x < range.endX ; lastX=x, x+=stepX, lastY=y) {
                     expression.setVariable("x", x);
                     try {
                         y = expression.evaluate();
-                        float screenX = (float)(width*((x-range.startX)/range.getWidth())),
-                                screenY = (float)(height*((range.getHeight()-(y-range.startY))/range.getHeight()));
+                        float screenX = (float)(screenWidth *((x-range.startX)/range.getWidth())),
+                                screenY = (float)(screenHeight *((range.getHeight()-(y-range.startY))/range.getHeight()));
                         if(!Double.isNaN(lastX)) {
-                            path.lineTo(screenX, screenY);
-                            path.moveTo(screenX, screenY);
+                            pathX.lineTo(screenX, screenY);
+                            pathX.moveTo(screenX, screenY);
                         } else {
-                            path.moveTo(screenX, screenY);
+                            pathX.moveTo(screenX, screenY);
                         }
                     } catch(Exception e) {}
                 }
-                path.close();
-                canvas.drawPath(path, paint);
+                pathX.close();
+                canvas.drawPath(pathX, paint);
             }
         }
 
-        private class PointD {
-            double x, y;
-            void set(PointD p) {
+        private class Point {
+            public double x, y, density;
+
+            public double screenX, screenY;
+            public boolean isMapped;
+
+            public double zeroX, zeroY;
+            public boolean isZeroed;
+
+            public void set(double x, double y, double density) {
+                this.x = x;
+                this.y = y;
+                this.density = density;
+                isMapped = false;
+                isZeroed = false;
+            }
+
+            void set(Point p) {
                 x = p.x;
                 y = p.y;
+                density = p.density;
+                screenX = p.screenX;
+                screenY = p.screenY;
+                isMapped = p.isMapped;
+                zeroX = p.zeroX;
+                zeroY = p.zeroY;
+                isZeroed = p.isZeroed;
+            }
+
+            public void mapToScreen() {
+                if(isZeroed) {
+                    screenX = screenWidth*((zeroX-range.startX)/range.getWidth());
+                    screenY = screenHeight*((range.getHeight()-(zeroY-range.startY))/range.getHeight());
+                } else {
+                    screenX = screenWidth*((x-range.startX)/range.getWidth());
+                    screenY = screenHeight*((range.getHeight()-(y-range.startY))/range.getHeight());
+                }
+                isMapped = true;
+            }
+
+            public void intermediateToDensityZero(Point to) {
+                double theta = Math.atan2((to.y - y), (to.x - x));
+                double distance = Math.sqrt(Math.pow(x-to.x, 2) + Math.pow(y-to.y, 2));
+                double progress = Math.abs(density)/(Math.abs(density)+Math.abs(to.density));
+                zeroX = x + (distance*progress)*Math.cos(theta);
+                zeroY = y + (distance*progress)*Math.sin(theta);
+                isMapped = false;
+                isZeroed = true;
+            }
+
+            public double densityDistance(Point to) {
+                return Math.abs(density-to.density);
+            }
+
+            public boolean isNegative() {
+                return density < 0;
+            }
+
+            public boolean isPositive() {
+                return density > 0;
+            }
+
+            public void lineTo(Point to, Paint paint, Canvas canvas) {
+                if(!isMapped) {
+                    mapToScreen();
+                }
+                if(!to.isMapped) {
+                    to.mapToScreen();
+                }
+                canvas.drawLine((float) (screenX), (float) (screenY), (float) (to.screenX), (float) (to.screenY), paint);
+            }
+
+            public void rect(Point bottomRight, Paint paint, Canvas canvas) {
+                if(!isMapped) {
+                    mapToScreen();
+                }
+                if(!bottomRight.isMapped) {
+                    bottomRight.mapToScreen();
+                }
+                canvas.drawRect((float) (screenX), (float) (screenY), (float) (bottomRight.screenX), (float) (bottomRight.screenY), paint);
+            }
+
+            public void drawPoint(Paint paint, Canvas canvas) {
+                if(!isMapped) {
+                    mapToScreen();
+                }
+                canvas.drawPoint((float) (screenX), (float) (screenY), paint);
             }
         }
 
-        private PointD[][] xy;
-        private float[][] dense;
-        private byte[][] kernel;
-        private PointD temp1 = new PointD(),
-                temp2 = new PointD();
-
-        private void mapPointToScreen(PointD p, Range range) {
-            p.x = width*((p.x-range.startX)/range.getWidth());
-            p.y = height*((range.getHeight()-(p.y-range.startY))/range.getHeight());
+        private byte point2Kernel(int i, int j) {
+            byte kernel = 0x0;
+            if(xy[i][j].density >= 0) {
+                kernel |= 0x1;
+            }
+            if(xy[i][j+1].density >= 0) {
+                kernel |= 0x2;
+            }
+            if(xy[i+1][j].density >= 0) {
+                kernel |= 0x4;
+            }
+            if(xy[i+1][j+1].density >= 0) {
+                kernel |= 0x8;
+            }
+            if(xy[i][j].density == 0 && xy[i][j+1].density == 0 && xy[i+1][j].density == 0 && xy[i+1][j+1].density == 0) {
+                kernel = 0x16;
+            }
+            return kernel;
         }
 
-        // calculation intermediate point in a line along the distance
-        private void intermediate(PointD p1, float d1, PointD p2, float d2, PointD result) {
-            double theta = Math.atan2((p2.y - p1.y), (p2.x - p1.x));
-            double distance = Math.sqrt(Math.pow(p1.x-p2.x, 2) + Math.pow(p1.y-p2.y, 2));
-            double progress = Math.abs(d1)/(Math.abs(d1)+Math.abs(d2));
-            result.x = p1.x + (distance*progress)*Math.cos(theta);
-            result.y = p1.y + (distance*progress)*Math.sin(theta);
+        // walk along the zero line until reaching the edges, assess the shape type.
+        private void findZeroLine(int i, int j) {
+            // find child with a change of sign then me value
+            Point child = null;
+            for(int m=0, ii=i-1, jj=j-1;m<9;m++, ii=i-1+m/3, jj=j-1+m%3) {
+                if(ii != i && jj != j && ii > 0 && jj > 0) {
+                    if(xy[i][j].density >= 0 && xy[ii][jj].isNegative() ||
+                            xy[i][j].density <= 0 && xy[ii][jj].isPositive()) {
+                        child = xy[ii][jj];
+                        break;
+                    }
+                }
+            }
+            // is my value 0 and im on the edge?
+            if(xy[i][j].density == 0 && i == 0 || i == xy.length-1 || j == 0 || j == xy[0].length-1) {
+
+            }
+            if(child == null) {
+                return;
+            }
+            // put path
+            xy[i][j].intermediateToDensityZero(child);
+            xy[i][j].mapToScreen();
+            if(!pathXY.isEmpty()) {
+                pathXY.lineTo((float)xy[i][j].x, (float)xy[i][j].y);
+            }
+            pathXY.moveTo((float)xy[i][j].x, (float)xy[i][j].y);
+            // check neighbors
+            for(int m=0, ii=i-1, jj=j-1;m<9;m++, ii=i-1+m/3, jj=j-1+m%3) {
+                if(ii != i && jj != j && ii > 0 && jj > 0) {
+                    pathXY.moveTo((float)xy[i][j].x, (float)xy[i][j].y);
+                    findZeroLine(ii, jj);
+                }
+            }
         }
 
-        private void line(PointD p11, float d11, PointD p12, float d12, PointD p21, float d21, PointD p22, float d22, Range range, Paint paint, Canvas canvas) {
-            intermediate(p11, d11, p12, d12, temp1);
-            mapPointToScreen(temp1, range);
-            intermediate(p21, d21, p22, d22, temp2);
-            mapPointToScreen(temp2, range);
-            canvas.drawLine((float) (temp1.x), (float) (temp1.y), (float) (temp2.x), (float) (temp2.y), paint);
-        }
-        private void rect(PointD tl, PointD br, Range range, Paint paint, Canvas canvas) {
-            temp1.set(tl);
-            mapPointToScreen(temp1, range);
-            temp2.set(br);
-            mapPointToScreen(temp2, range);
-            canvas.drawRect((float) (temp1.x), (float) (temp1.y), (float) (temp2.x), (float) (temp2.y), paint);
-        }
-
-        public void render(Range range, Paint paint, Canvas canvas) {
+        public void render(Paint paint, Canvas canvas) {
 //            System.out.println("size " + dense[0].length + "-" + dense.length);
             long startTime, endTime;
             startTime = System.currentTimeMillis();
-            double stepX = range.getWidth()/(dense[0].length-1),
-                    stepY = range.getHeight()/(dense.length-1);
+            double stepX = range.getWidth()/(xy[0].length-1),
+                    stepY = range.getHeight()/(xy.length-1);
             // general variables
             for(Map.Entry<Equation, Expression> i : equationsExpressions.entrySet()) {
                 Expression expression = i.getValue();
@@ -318,71 +430,85 @@ public class SystemOfEquations {
                         for(double x=range.startX; x < range.endX ; x+=stepX) {
                             expression.setVariable("x", x);
                             try { value = expression.evaluate(); } catch(Exception e) {}
-                            dense[i][j] = (float) value;
-                            xy[i][j].x = x;
-                            xy[i][j].y = y;
+                            xy[i][j].set(x, y, value);
                             j++;
                         }
                         i++;
                     }
                 }
-                // edge detection - edges kernel type
-                for(int i = 0; i < dense.length - 2; i++) {
-                    for(int j = 0; j < dense[0].length - 2; j++) {
-                        kernel[i][j] = 0x0;
-                        if(dense[i][j] >= 0) {
-                            kernel[i][j] |= 0x1;
-                        }
-                        if(dense[i][j+1] >= 0) {
-                            kernel[i][j] |= 0x2;
-                        }
-                        if(dense[i+1][j] >= 0) {
-                            kernel[i][j] |= 0x4;
-                        }
-                        if(dense[i+1][j+1] >= 0) {
-                            kernel[i][j] |= 0x8;
-                        }
-                        if(dense[i][j] == 0 && dense[i][j+1] == 0 && dense[i+1][j] == 0 && dense[i+1][j+1] == 0) {
-                            kernel[i][j] = 0x16;
-                        }
-                    }
-                }
-                // lines between edges and fill areas
-                for(int i = 0; i < kernel.length - 2; i++) {
-                    for (int j = 0; j < kernel[0].length - 2; j++) {
-                        switch(kernel[i][j]) {
+                for(int i = 0; i < xy.length - 2; i++) {
+                    for (int j = 0; j < xy[0].length - 2; j++) {
+                        switch(point2Kernel(i, j)) {
                             case (0x1 | 0X2):
                             case (0x4 | 0X8):
-                                line(xy[i][j], dense[i][j], xy[i+1][j], dense[i+1][j], xy[i][j+1], dense[i][j+1], xy[i+1][j+1], dense[i+1][j+1], range, paint, canvas);
+                                xy[i][j].intermediateToDensityZero(xy[i+1][j]);
+                                xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
+                                xy[i][j].lineTo(xy[i][j+1], paint, canvas);
                                 break;
                             case (0x2 | 0X8):
                             case (0x1 | 0X4):
                             case (0x1 | 0X8):
                             case (0x2 | 0X4):
-                                line(xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], range, paint, canvas);
+                                xy[i][j].intermediateToDensityZero(xy[i][j+1]);
+                                xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
+                                xy[i][j].lineTo(xy[i+1][j], paint, canvas);
                                 break;
                             case (0x1 | 0x2 | 0x4):
                             case (0x8):
-                                line(xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], xy[i][j+1], dense[i][j+1], xy[i+1][j+1], dense[i+1][j+1], range, paint, canvas);
+                                xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
+                                xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
+                                xy[i+1][j].lineTo(xy[i][j+1], paint, canvas);
                                 break;
                             case (0x1 | 0x2 | 0x8):
                             case (0x4):
-                                line(xy[i][j], dense[i][j], xy[i+1][j], dense[i+1][j], xy[i+1][j+1], dense[i+1][j+1], xy[i+1][j], dense[i+1][j], range, paint, canvas);
+                                xy[i][j].intermediateToDensityZero(xy[i+1][j]);
+                                xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
+                                xy[i][j].lineTo(xy[i+1][j], paint, canvas);
                                 break;
                             case (0x2 | 0x4 | 0x8):
                             case (0x1):
-                                line(xy[i+1][j], dense[i+1][j], xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i][j], dense[i][j], range, paint, canvas);
+                                xy[i][j].intermediateToDensityZero(xy[i+1][j]);
+                                xy[i][j+1].intermediateToDensityZero(xy[i][j]);
+                                xy[i][j].lineTo(xy[i][j+1], paint, canvas);
                                 break;
                             case (0x1 | 0x4 | 0x8):
                             case (0x2):
-                                line(xy[i][j], dense[i][j], xy[i][j+1], dense[i][j+1], xy[i+1][j+1], dense[i+1][j+1], xy[i][j+1], dense[i][j+1], range, paint, canvas);
+                                xy[i][j].intermediateToDensityZero(xy[i][j+1]);
+                                xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
+                                xy[i][j].lineTo(xy[i][j+1], paint, canvas);
                                 break;
                             case (0x16):
-                                rect(xy[i][j], xy[i+1][j+1], range, paint, canvas);
+                                xy[i][j].drawPoint(paint, canvas);
+                                xy[i][j+1].drawPoint(paint, canvas);
+                                xy[i+1][j].drawPoint(paint, canvas);
+                                xy[i+1][j+1].drawPoint(paint, canvas);
                                 break;
                         }
                     }
                 }
+                /*
+                for(int i = 0; i < xy.length - 1; i++) {
+                    for (int j = 0; j < xy[0].length - 1; j++) {
+                        paint.setColor(Color.rgb((xy[i][j].density < 0) ? (int)(Math.max(-xy[i][j].density*255, 255)) : 0,
+                                (xy[i][j].density > 0) ? (int)(Math.max(xy[i][j].density*255, 255)) : 0,
+                                (xy[i][j].density == 0) ? 255 : 0));
+                        xy[i][j].mapToScreen();
+                        canvas.drawPoint((float) (xy[i][j].screenX), (float) (xy[i][j].screenY), paint);
+                    }
+                }
+                double min = Double.POSITIVE_INFINITY,
+                        max = Double.NEGATIVE_INFINITY;
+                for(int i = 0; i < xy.length - 1; i++) {
+                    for (int j = 0; j < xy[0].length - 1; j++) {
+                        if(xy[i][j].density < min) {
+                            min = xy[i][j].density;
+                        }
+                        if(xy[i][j].density > max) {
+                            max = xy[i][j].density;
+                        }
+                    }
+                }
+                 */
             }
             endTime = System.currentTimeMillis();
             System.out.println("time " + (endTime - startTime) + " milliseconds");
@@ -390,7 +516,7 @@ public class SystemOfEquations {
     }
 
     public Renderer render(int width, int height, float density){
-        if(renderer == null || !renderer.isSame(width, height, density)) {
+        if(renderer == null || !renderer.isScreenParams(width, height, density)) {
             renderer = new Renderer(width, height, density);
         }
         return renderer;

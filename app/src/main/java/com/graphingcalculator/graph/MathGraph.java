@@ -504,7 +504,8 @@ public class MathGraph extends View {
         paint.setStyle(Paint.Style.STROKE);
         if(equations != null) {
             SystemOfEquations.Renderer renderer = equations.render(width, height, density);
-            renderer.render(range, paint, canvas);
+            renderer.setRange(range);
+            renderer.render(paint, canvas);
         }
 
         // axis

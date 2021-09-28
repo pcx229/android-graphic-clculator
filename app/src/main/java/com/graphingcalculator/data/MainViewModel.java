@@ -225,13 +225,9 @@ public class MainViewModel extends AndroidViewModel {
     }
 
     public expression addExpression(String text) {
-        System.out.println("create expression");
         expression exp = parseExpression(null, text);
-        System.out.println("expression created - function? " + (exp instanceof function));
         expressions.add(0, exp);
-        System.out.println("update expressions");
         updateExpressions();
-        System.out.println("done");
         return exp;
     }
 
