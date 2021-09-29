@@ -8,4 +8,4 @@ https://www.objecthunter.net/exp4j/
 
 ### ScreenShot  
 
-![tracking app](https://raw.githubusercontent.com/pcx229/android-graphic-clculator/master/screenshot.gif)
+![calculator app](https://raw.githubusercontent.com/pcx229/android-graphic-clculator/master/screenshot.png)
