@@ -9,6 +9,7 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
@@ -456,13 +457,14 @@ public class MathGraph extends View {
 
     protected void onDraw(Canvas canvas) {
 
-        // TODO: move calculating equation to background thread to prevent stuttering
-
         super.onDraw(canvas);
 
         if(!initializedViewSize) {
             return;
         }
+
+        long startTime, endTime;
+        startTime = System.currentTimeMillis();
 
         // setup canvas
         float density = getResources().getDisplayMetrics().density;
@@ -586,5 +588,7 @@ public class MathGraph extends View {
             }
         }
 
+        endTime = System.currentTimeMillis();
+        Log.d("MATH_GRAPH_DRAW_TIME", (endTime - startTime) + " milliseconds");
     }
 }

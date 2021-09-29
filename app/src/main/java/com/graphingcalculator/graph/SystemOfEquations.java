@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class SystemOfEquations {
 
@@ -41,44 +42,28 @@ public class SystemOfEquations {
 
             @Override
             public double apply(double[] values) {
-                if (values[0] >= values[1]) {
-                    return 0d;
-                } else {
-                    return values[1] - values[0];
-                }
+                return values[0] - values[1];
             }
         });
         operators.add(new Operator(">", 2, true, Operator.PRECEDENCE_ADDITION - 1) {
 
             @Override
             public double apply(double[] values) {
-                if (values[0] > values[1]) {
-                    return 0d;
-                } else {
-                    return values[1] - values[0];
-                }
+                return values[0] - values[1];
             }
         });
         operators.add(new Operator("<=", 2, true, Operator.PRECEDENCE_ADDITION - 1) {
 
             @Override
             public double apply(double[] values) {
-                if (values[0] <= values[1]) {
-                    return 0d;
-                } else {
-                    return values[0] - values[1];
-                }
+                return values[1] - values[0];
             }
         });
         operators.add(new Operator("<", 2, true, Operator.PRECEDENCE_ADDITION - 1) {
 
             @Override
             public double apply(double[] values) {
-                if (values[0] < values[1]) {
-                    return 0d;
-                } else {
-                    return values[0] - values[1];
-                }
+                return values[1] - values[0];
             }
         });
         operators.add(new Operator("!", 1, true, Operator.PRECEDENCE_POWER + 1) {
@@ -177,6 +162,7 @@ public class SystemOfEquations {
 
         private Path pathX;
 
+        private int calcWidth, calcHeight;
         private Point[][] xy;
         private Path pathXY;
 
@@ -192,16 +178,18 @@ public class SystemOfEquations {
             variablesSet.add("y");
             variablesSet.add("x");
             for(Equation equation : equations) {
-                Expression expression = new ExpressionBuilder(equation.getEquation())
-                        .variables(variablesSet)
-                        .functions(functionsList)
-                        .operator(operators)
-                        .build();
-                equationsExpressions.put(equation, expression);
+                try {
+                    Expression expression = new ExpressionBuilder(equation.getEquation())
+                            .variables(variablesSet)
+                            .functions(functionsList)
+                            .operator(operators)
+                            .build();
+                    equationsExpressions.put(equation, expression);
+                } catch(Exception e) {}
             }
 
-            int calcWidth = (int) (screenWidth / (screenDensity *3)),
-                    calcHeight = (int) (screenHeight / (screenDensity *3));
+            calcWidth = (int) (screenWidth / (screenDensity *3));
+            calcHeight = (int) (screenHeight / (screenDensity *3));
             xy = new Point[calcHeight][calcWidth];
             for(int i=0;i<calcHeight;i++) {
                 for(int j=0;j<calcWidth;j++) {
@@ -308,14 +296,6 @@ public class SystemOfEquations {
                 return Math.abs(density-to.density);
             }
 
-            public boolean isNegative() {
-                return density < 0;
-            }
-
-            public boolean isPositive() {
-                return density > 0;
-            }
-
             public void lineTo(Point to, Paint paint, Canvas canvas) {
                 if(!isMapped) {
                     mapToScreen();
@@ -344,7 +324,7 @@ public class SystemOfEquations {
             }
         }
 
-        private byte point2Kernel(int i, int j) {
+        private byte findKernel(int i, int j) {
             byte kernel = 0x0;
             if(xy[i][j].density >= 0) {
                 kernel |= 0x1;
@@ -358,54 +338,133 @@ public class SystemOfEquations {
             if(xy[i+1][j+1].density >= 0) {
                 kernel |= 0x8;
             }
-            if(xy[i][j].density == 0 && xy[i][j+1].density == 0 && xy[i+1][j].density == 0 && xy[i+1][j+1].density == 0) {
-                kernel = 0x16;
-            }
             return kernel;
         }
 
-        // walk along the zero line until reaching the edges, assess the shape type.
-        private void findZeroLine(int i, int j) {
-            // find child with a change of sign then me value
+        private void drawWithKernel(boolean fillShape, Paint paint, Canvas canvas) {
+            for(int i = 0; i < calcHeight - 1; i++) {
+                for (int j = 0; j < calcWidth - 1; j++) {
+                    byte kernel = findKernel(i, j);
+                    switch(kernel) {
+                        case (0x1 | 0X2):
+                        case (0x4 | 0X8):
+                            xy[i][j].intermediateToDensityZero(xy[i+1][j]);
+                            xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
+                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                            break;
+                        case (0x2 | 0X8):
+                        case (0x1 | 0X4):
+                        case (0x1 | 0X8):
+                        case (0x2 | 0X4):
+                            xy[i][j].intermediateToDensityZero(xy[i][j+1]);
+                            xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
+                            xy[i][j].lineTo(xy[i+1][j], paint, canvas);
+                            break;
+                        case (0x1 | 0x2 | 0x4):
+                        case (0x8):
+                            xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
+                            xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
+                            xy[i+1][j].lineTo(xy[i][j+1], paint, canvas);
+                            break;
+                        case (0x1 | 0x2 | 0x8):
+                        case (0x4):
+                            xy[i][j].intermediateToDensityZero(xy[i+1][j]);
+                            xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
+                            xy[i][j].lineTo(xy[i+1][j], paint, canvas);
+                            break;
+                        case (0x2 | 0x4 | 0x8):
+                        case (0x1):
+                            xy[i][j].intermediateToDensityZero(xy[i+1][j]);
+                            xy[i][j+1].intermediateToDensityZero(xy[i][j]);
+                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                            break;
+                        case (0x1 | 0x4 | 0x8):
+                        case (0x2):
+                            xy[i][j].intermediateToDensityZero(xy[i][j+1]);
+                            xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
+                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                            break;
+                    }
+                }
+            }
+            if(fillShape) {
+                for(int i = 0; i < calcHeight - 1; i++) {
+                    for (int j = 0; j < calcWidth - 1; j++) {
+                        if (xy[i][j].density >= 0 && xy[i][j+1].density >= 0) {
+                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                        }
+                        if (xy[i][j].density >= 0 && xy[i+1][j].density >= 0) {
+                            xy[i][j].lineTo(xy[i+1][j], paint, canvas);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void findZeroLine(int i, int j, int depth) {
             Point child = null;
-            for(int m=0, ii=i-1, jj=j-1;m<9;m++, ii=i-1+m/3, jj=j-1+m%3) {
-                if(ii != i && jj != j && ii > 0 && jj > 0) {
-                    if(xy[i][j].density >= 0 && xy[ii][jj].isNegative() ||
-                            xy[i][j].density <= 0 && xy[ii][jj].isPositive()) {
+            for(int m=0, ii=i-1, jj=j-1;m<3*3;m++, ii=i-1+m/3, jj=j-1+m%3) {
+                if(!(ii == i && jj == j) &&
+                        ii >= 0 && jj >= 0 &&
+                        ii < calcHeight && jj < calcWidth &&
+                        !xy[ii][jj].isMapped) {
+                    if((xy[i][j].density < 0 && xy[ii][jj].density >= 0) ||
+                            (xy[i][j].density >= 0 && xy[ii][jj].density < 0)) {
                         child = xy[ii][jj];
                         break;
                     }
                 }
             }
-            // is my value 0 and im on the edge?
-            if(xy[i][j].density == 0 && i == 0 || i == xy.length-1 || j == 0 || j == xy[0].length-1) {
-
-            }
             if(child == null) {
                 return;
             }
-            // put path
             xy[i][j].intermediateToDensityZero(child);
             xy[i][j].mapToScreen();
-            if(!pathXY.isEmpty()) {
-                pathXY.lineTo((float)xy[i][j].x, (float)xy[i][j].y);
+            if(depth != 0) {
+                pathXY.lineTo((float)xy[i][j].screenX, (float)xy[i][j].screenY);
             }
-            pathXY.moveTo((float)xy[i][j].x, (float)xy[i][j].y);
-            // check neighbors
-            for(int m=0, ii=i-1, jj=j-1;m<9;m++, ii=i-1+m/3, jj=j-1+m%3) {
-                if(ii != i && jj != j && ii > 0 && jj > 0) {
-                    pathXY.moveTo((float)xy[i][j].x, (float)xy[i][j].y);
-                    findZeroLine(ii, jj);
+            for(int m=0, ii=i-1, jj=j-1;m<3*3;m++, ii=i-1+m/3, jj=j-1+m%3) {
+                if(!(ii == i && jj == j) &&
+                        ii >= 0 && jj >= 0 &&
+                        ii < calcHeight && jj < calcWidth &&
+                        !xy[ii][jj].isMapped) {
+                    if((xy[i][j].density < 0 && xy[ii][jj].density < 0) ||
+                            (xy[i][j].density >= 0 && xy[ii][jj].density >= 0)) {
+                        pathXY.moveTo((float)xy[i][j].screenX, (float)xy[i][j].screenY);
+                        findZeroLine(ii, jj, depth+1);
+                    }
+                }
+            }
+        }
+
+        private boolean differentSign(Point a, Point b) {
+            return (a.density < 0 && b.density >=0) || (a.density >= 0 && b.density < 0);
+        }
+
+        private void drawWithSearch(boolean fillShape, Paint paint, Canvas canvas) {
+            pathXY.reset();
+            for(int i = 0; i < calcHeight - 1; i++) {
+                for (int j = 0; j < calcWidth - 1; j++) {
+                    if(differentSign(xy[i][j], xy[i][j+1]) || differentSign(xy[i][j], xy[i+1][j]) || differentSign(xy[i][j], xy[i+1][j+1])) {
+                        findZeroLine(i, j, 0);
+                    }
+                }
+            }
+            canvas.drawPath(pathXY, paint);
+            if(fillShape) {
+                for(int i = 0; i < calcHeight; i++) {
+                    for (int j = 0; j < calcWidth; j++) {
+                        if (xy[i][j].density >= 0) {
+                            xy[i][j].drawPoint(paint, canvas);
+                        }
+                    }
                 }
             }
         }
 
         public void render(Paint paint, Canvas canvas) {
-//            System.out.println("size " + dense[0].length + "-" + dense.length);
-            long startTime, endTime;
-            startTime = System.currentTimeMillis();
-            double stepX = range.getWidth()/(xy[0].length-1),
-                    stepY = range.getHeight()/(xy.length-1);
+            double stepX = range.getWidth()/(calcWidth-1),
+                    stepY = range.getHeight()/(calcHeight-1);
             // general variables
             for(Map.Entry<Equation, Expression> i : equationsExpressions.entrySet()) {
                 Expression expression = i.getValue();
@@ -421,97 +480,26 @@ public class SystemOfEquations {
                 equation = exeq.getKey();
                 paint.setColor(equation.getColor());
                 // density
-                {
-                    int i=0, j;
-                    double value = 0;
-                    for (double y=range.startY; y < range.endY; y+=stepY) {
-                        expression.setVariable("y", y);
-                        j=0;
-                        for(double x=range.startX; x < range.endX ; x+=stepX) {
-                            expression.setVariable("x", x);
-                            try { value = expression.evaluate(); } catch(Exception e) {}
-                            xy[i][j].set(x, y, value);
-                            j++;
+                double value = 0;
+                double itrY = range.startY;
+                for(int i = 0; i < calcHeight; i++, itrY += stepY) {
+                    expression.setVariable("y", itrY);
+                    double itrX = range.startX;
+                    for (int j = 0; j < calcWidth; j++, itrX += stepX) {
+                        expression.setVariable("x", itrX);
+                        try {
+                            value = expression.evaluate();
+                        } catch (Exception e) {
                         }
-                        i++;
+                        xy[i][j].set(itrX, itrY, value);
                     }
                 }
-                for(int i = 0; i < xy.length - 2; i++) {
-                    for (int j = 0; j < xy[0].length - 2; j++) {
-                        switch(point2Kernel(i, j)) {
-                            case (0x1 | 0X2):
-                            case (0x4 | 0X8):
-                                xy[i][j].intermediateToDensityZero(xy[i+1][j]);
-                                xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
-                                xy[i][j].lineTo(xy[i][j+1], paint, canvas);
-                                break;
-                            case (0x2 | 0X8):
-                            case (0x1 | 0X4):
-                            case (0x1 | 0X8):
-                            case (0x2 | 0X4):
-                                xy[i][j].intermediateToDensityZero(xy[i][j+1]);
-                                xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
-                                xy[i][j].lineTo(xy[i+1][j], paint, canvas);
-                                break;
-                            case (0x1 | 0x2 | 0x4):
-                            case (0x8):
-                                xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
-                                xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
-                                xy[i+1][j].lineTo(xy[i][j+1], paint, canvas);
-                                break;
-                            case (0x1 | 0x2 | 0x8):
-                            case (0x4):
-                                xy[i][j].intermediateToDensityZero(xy[i+1][j]);
-                                xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
-                                xy[i][j].lineTo(xy[i+1][j], paint, canvas);
-                                break;
-                            case (0x2 | 0x4 | 0x8):
-                            case (0x1):
-                                xy[i][j].intermediateToDensityZero(xy[i+1][j]);
-                                xy[i][j+1].intermediateToDensityZero(xy[i][j]);
-                                xy[i][j].lineTo(xy[i][j+1], paint, canvas);
-                                break;
-                            case (0x1 | 0x4 | 0x8):
-                            case (0x2):
-                                xy[i][j].intermediateToDensityZero(xy[i][j+1]);
-                                xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
-                                xy[i][j].lineTo(xy[i][j+1], paint, canvas);
-                                break;
-                            case (0x16):
-                                xy[i][j].drawPoint(paint, canvas);
-                                xy[i][j+1].drawPoint(paint, canvas);
-                                xy[i+1][j].drawPoint(paint, canvas);
-                                xy[i+1][j+1].drawPoint(paint, canvas);
-                                break;
-                        }
-                    }
+                boolean fillShape = false;
+                if(Pattern.compile(">=|<=|<|>").matcher(equation.getEquation()).find()) {
+                    fillShape = true;
                 }
-                /*
-                for(int i = 0; i < xy.length - 1; i++) {
-                    for (int j = 0; j < xy[0].length - 1; j++) {
-                        paint.setColor(Color.rgb((xy[i][j].density < 0) ? (int)(Math.max(-xy[i][j].density*255, 255)) : 0,
-                                (xy[i][j].density > 0) ? (int)(Math.max(xy[i][j].density*255, 255)) : 0,
-                                (xy[i][j].density == 0) ? 255 : 0));
-                        xy[i][j].mapToScreen();
-                        canvas.drawPoint((float) (xy[i][j].screenX), (float) (xy[i][j].screenY), paint);
-                    }
-                }
-                double min = Double.POSITIVE_INFINITY,
-                        max = Double.NEGATIVE_INFINITY;
-                for(int i = 0; i < xy.length - 1; i++) {
-                    for (int j = 0; j < xy[0].length - 1; j++) {
-                        if(xy[i][j].density < min) {
-                            min = xy[i][j].density;
-                        }
-                        if(xy[i][j].density > max) {
-                            max = xy[i][j].density;
-                        }
-                    }
-                }
-                 */
+                drawWithKernel(fillShape, paint, canvas);
             }
-            endTime = System.currentTimeMillis();
-            System.out.println("time " + (endTime - startTime) + " milliseconds");
         }
     }
 
