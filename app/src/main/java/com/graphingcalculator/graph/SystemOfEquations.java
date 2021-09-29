@@ -302,31 +302,15 @@ public class SystemOfEquations {
                 return Math.abs(density-to.density);
             }
 
-            public void lineTo(Point to, Paint paint, Canvas canvas) {
+            public void lineTo(Point to) {
                 if(!isMapped) {
                     mapToScreen();
                 }
                 if(!to.isMapped) {
                     to.mapToScreen();
                 }
-                canvas.drawLine((float) (screenX), (float) (screenY), (float) (to.screenX), (float) (to.screenY), paint);
-            }
-
-            public void rect(Point bottomRight, Paint paint, Canvas canvas) {
-                if(!isMapped) {
-                    mapToScreen();
-                }
-                if(!bottomRight.isMapped) {
-                    bottomRight.mapToScreen();
-                }
-                canvas.drawRect((float) (screenX), (float) (screenY), (float) (bottomRight.screenX), (float) (bottomRight.screenY), paint);
-            }
-
-            public void drawPoint(Paint paint, Canvas canvas) {
-                if(!isMapped) {
-                    mapToScreen();
-                }
-                canvas.drawPoint((float) (screenX), (float) (screenY), paint);
+                pathXY.moveTo((float) (screenX), (float) (screenY));
+                pathXY.lineTo((float) (to.screenX), (float) (to.screenY));
             }
         }
 
@@ -347,7 +331,7 @@ public class SystemOfEquations {
             return kernel;
         }
 
-        private void drawWithKernel(boolean fillShape, Paint paint, Canvas canvas) {
+        private void drawWithKernel(boolean fillShape) {
             for(int i = 0; i < calcHeight - 1; i++) {
                 for (int j = 0; j < calcWidth - 1; j++) {
                     byte kernel = findKernel(i, j);
@@ -356,7 +340,7 @@ public class SystemOfEquations {
                         case (0x4 | 0X8):
                             xy[i][j].intermediateToDensityZero(xy[i+1][j]);
                             xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
-                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                            xy[i][j].lineTo(xy[i][j+1]);
                             break;
                         case (0x2 | 0X8):
                         case (0x1 | 0X4):
@@ -364,31 +348,31 @@ public class SystemOfEquations {
                         case (0x2 | 0X4):
                             xy[i][j].intermediateToDensityZero(xy[i][j+1]);
                             xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
-                            xy[i][j].lineTo(xy[i+1][j], paint, canvas);
+                            xy[i][j].lineTo(xy[i+1][j]);
                             break;
                         case (0x1 | 0x2 | 0x4):
                         case (0x8):
                             xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
                             xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
-                            xy[i+1][j].lineTo(xy[i][j+1], paint, canvas);
+                            xy[i+1][j].lineTo(xy[i][j+1]);
                             break;
                         case (0x1 | 0x2 | 0x8):
                         case (0x4):
                             xy[i][j].intermediateToDensityZero(xy[i+1][j]);
                             xy[i+1][j].intermediateToDensityZero(xy[i+1][j+1]);
-                            xy[i][j].lineTo(xy[i+1][j], paint, canvas);
+                            xy[i][j].lineTo(xy[i+1][j]);
                             break;
                         case (0x2 | 0x4 | 0x8):
                         case (0x1):
                             xy[i][j].intermediateToDensityZero(xy[i+1][j]);
                             xy[i][j+1].intermediateToDensityZero(xy[i][j]);
-                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                            xy[i][j].lineTo(xy[i][j+1]);
                             break;
                         case (0x1 | 0x4 | 0x8):
                         case (0x2):
                             xy[i][j].intermediateToDensityZero(xy[i][j+1]);
                             xy[i][j+1].intermediateToDensityZero(xy[i+1][j+1]);
-                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                            xy[i][j].lineTo(xy[i][j+1]);
                             break;
                     }
                 }
@@ -397,10 +381,10 @@ public class SystemOfEquations {
                 for(int i = 0; i < calcHeight - 1; i++) {
                     for (int j = 0; j < calcWidth - 1; j++) {
                         if (xy[i][j].density >= 0 && xy[i][j+1].density >= 0) {
-                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                            xy[i][j].lineTo(xy[i][j+1]);
                         }
                         if (xy[i][j].density >= 0 && xy[i+1][j].density >= 0) {
-                            xy[i][j].lineTo(xy[i+1][j], paint, canvas);
+                            xy[i][j].lineTo(xy[i+1][j]);
                         }
                     }
                 }
@@ -447,8 +431,7 @@ public class SystemOfEquations {
             return (a.density < 0 && b.density >=0) || (a.density >= 0 && b.density < 0);
         }
 
-        private void drawWithSearch(boolean fillShape, Paint paint, Canvas canvas) {
-            pathXY.reset();
+        private void drawWithSearch(boolean fillShape) {
             for(int i = 0; i < calcHeight - 1; i++) {
                 for (int j = 0; j < calcWidth - 1; j++) {
                     if(differentSign(xy[i][j], xy[i][j+1]) || differentSign(xy[i][j], xy[i+1][j]) || differentSign(xy[i][j], xy[i+1][j+1])) {
@@ -456,15 +439,14 @@ public class SystemOfEquations {
                     }
                 }
             }
-            canvas.drawPath(pathXY, paint);
             if(fillShape) {
                 for(int i = 0; i < calcHeight - 1; i++) {
                     for (int j = 0; j < calcWidth - 1; j++) {
                         if (xy[i][j].density >= 0 && xy[i][j+1].density >= 0) {
-                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                            xy[i][j].lineTo(xy[i][j+1]);
                         }
                         if (xy[i][j].density >= 0 && xy[i+1][j].density >= 0) {
-                            xy[i][j].lineTo(xy[i+1][j], paint, canvas);
+                            xy[i][j].lineTo(xy[i+1][j]);
                         }
                     }
                 }
@@ -505,7 +487,9 @@ public class SystemOfEquations {
                 if(Pattern.compile(">=|<=|<|>").matcher(exeq.equation.getEquation()).find()) {
                     fillShape = true;
                 }
-                drawWithKernel(fillShape, paint, canvas);
+                pathXY.reset();
+                drawWithKernel(fillShape);
+                canvas.drawPath(pathXY, paint);
             }
         }
     }
