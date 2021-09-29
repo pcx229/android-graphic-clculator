@@ -46,6 +46,7 @@ public class MainViewModel extends AndroidViewModel {
         appDataRepository = AppDataRepository.buildInstance(application);
 
         settings = Settings.load(getApplication());
+        settingsUpdates.setValue(settings);
         settingsUpdates.postValue(settings);
 
         AsyncTask.execute(() -> {
@@ -309,25 +310,27 @@ public class MainViewModel extends AndroidViewModel {
         Pattern variablePattern = Pattern.compile("^[ ]*([a-zA-Z][a-zA-Z0-9]*)[ ]*=[ ]*([-]?\\d+(\\.\\d+)?)[ ]*$");
         Matcher variableMatcher = variablePattern.matcher(pattern);
         if(variableMatcher.matches()) {
-            String name = variableMatcher.group(1);
-            double value = Double.parseDouble(variableMatcher.group(2));
-            if(last instanceof variable) {
-                ((variable) last).setName(name);
-                ((variable) last).setValue(value);
-                return last;
-            } else {
-                double startValue = value - 10.0,
-                        endValue = value + 10.0;
-                if (equations.hasVariable(name)) {
-                    throw new IllegalArgumentException("variable name already exist");
-                }
-                variable o = new variable(name, value, startValue, endValue);
-                if(last != null) {
-                    o.setIndex(last.getIndex());
+            String name = variableMatcher.group(1).trim();
+            if(!name.equals("y") && !name.equals("x")) {
+                double value = Double.parseDouble(variableMatcher.group(2));
+                if(last instanceof variable) {
+                    ((variable) last).setName(name);
+                    ((variable) last).setValue(value);
+                    return last;
                 } else {
-                    o.setIndex(getExpressionNextIndex());
+                    double startValue = value - 10.0,
+                            endValue = value + 10.0;
+                    if (equations.hasVariable(name)) {
+                        throw new IllegalArgumentException("variable name already exist");
+                    }
+                    variable o = new variable(name, value, startValue, endValue);
+                    if(last != null) {
+                        o.setIndex(last.getIndex());
+                    } else {
+                        o.setIndex(getExpressionNextIndex());
+                    }
+                    return o;
                 }
-                return o;
             }
         }
 

@@ -156,7 +156,16 @@ public class SystemOfEquations {
         private int screenWidth, screenHeight;
         private float screenDensity;
 
-        private Map<Equation, Expression> equationsExpressions;
+        private class EquationsExpressions {
+            public Equation equation;
+            public Expression expression;
+
+            public EquationsExpressions(Equation equation, Expression expression) {
+                this.equation = equation;
+                this.expression = expression;
+            }
+        }
+        private List<EquationsExpressions> equationsExpressions;
 
         private Range range;
 
@@ -170,7 +179,7 @@ public class SystemOfEquations {
             this.screenWidth = screenWidth;
             this.screenHeight = screenHeight;
             this.screenDensity = screenDensity;
-            equationsExpressions = new HashMap<>();
+            equationsExpressions = new ArrayList<>();
             pathX = new Path();
             pathXY = new Path();
             List<Function> functionsList = new ArrayList<>(functions.values());
@@ -184,7 +193,7 @@ public class SystemOfEquations {
                             .functions(functionsList)
                             .operator(operators)
                             .build();
-                    equationsExpressions.put(equation, expression);
+                    equationsExpressions.add(new EquationsExpressions(equation, expression));
                 } catch(Exception e) {}
             }
 
@@ -209,24 +218,21 @@ public class SystemOfEquations {
         public void renderX(Paint paint, Canvas canvas) {
             double stepX = range.getWidth()/((screenWidth / (screenDensity *3))-1);
             // general variables
-            for(Map.Entry<Equation, Expression> i : equationsExpressions.entrySet()) {
-                Expression expression = i.getValue();
+            for(EquationsExpressions exeq : equationsExpressions) {
                 for(Map.Entry<String, Double> var : variables.entrySet()) {
-                    expression.setVariable(var.getKey(), var.getValue());
+                    exeq.expression.setVariable(var.getKey(), var.getValue());
                 }
             }
             // x variable
             Expression expression;
             Equation equation;
-            for(Map.Entry<Equation, Expression> exeq : equationsExpressions.entrySet()) {
-                expression = exeq.getValue();
-                equation = exeq.getKey();
-                paint.setColor(equation.getColor());
+            for(EquationsExpressions exeq : equationsExpressions) {
+                paint.setColor(exeq.equation.getColor());
                 pathX.reset();
                 for(double x=range.startX, lastX=Double.NaN, y=0, lastY=0; x < range.endX ; lastX=x, x+=stepX, lastY=y) {
-                    expression.setVariable("x", x);
+                    exeq.expression.setVariable("x", x);
                     try {
-                        y = expression.evaluate();
+                        y = exeq.expression.evaluate();
                         float screenX = (float)(screenWidth *((x-range.startX)/range.getWidth())),
                                 screenY = (float)(screenHeight *((range.getHeight()-(y-range.startY))/range.getHeight()));
                         if(!Double.isNaN(lastX)) {
@@ -452,10 +458,13 @@ public class SystemOfEquations {
             }
             canvas.drawPath(pathXY, paint);
             if(fillShape) {
-                for(int i = 0; i < calcHeight; i++) {
-                    for (int j = 0; j < calcWidth; j++) {
-                        if (xy[i][j].density >= 0) {
-                            xy[i][j].drawPoint(paint, canvas);
+                for(int i = 0; i < calcHeight - 1; i++) {
+                    for (int j = 0; j < calcWidth - 1; j++) {
+                        if (xy[i][j].density >= 0 && xy[i][j+1].density >= 0) {
+                            xy[i][j].lineTo(xy[i][j+1], paint, canvas);
+                        }
+                        if (xy[i][j].density >= 0 && xy[i+1][j].density >= 0) {
+                            xy[i][j].lineTo(xy[i+1][j], paint, canvas);
                         }
                     }
                 }
@@ -466,36 +475,34 @@ public class SystemOfEquations {
             double stepX = range.getWidth()/(calcWidth-1),
                     stepY = range.getHeight()/(calcHeight-1);
             // general variables
-            for(Map.Entry<Equation, Expression> i : equationsExpressions.entrySet()) {
-                Expression expression = i.getValue();
+            for(EquationsExpressions exeq : equationsExpressions) {
                 for(Map.Entry<String, Double> var : variables.entrySet()) {
-                    expression.setVariable(var.getKey(), var.getValue());
+                    exeq.expression.setVariable(var.getKey(), var.getValue());
                 }
             }
             // x, y variables
             Expression expression;
             Equation equation;
-            for(Map.Entry<Equation, Expression> exeq : equationsExpressions.entrySet()) {
-                expression = exeq.getValue();
-                equation = exeq.getKey();
-                paint.setColor(equation.getColor());
+            for(EquationsExpressions exeq : equationsExpressions) {
+                paint.setColor(exeq.equation.getColor());
                 // density
                 double value = 0;
                 double itrY = range.startY;
                 for(int i = 0; i < calcHeight; i++, itrY += stepY) {
-                    expression.setVariable("y", itrY);
+                    exeq.expression.setVariable("y", itrY);
                     double itrX = range.startX;
                     for (int j = 0; j < calcWidth; j++, itrX += stepX) {
-                        expression.setVariable("x", itrX);
+                        exeq.expression.setVariable("x", itrX);
                         try {
-                            value = expression.evaluate();
+                            value = exeq.expression.evaluate();
                         } catch (Exception e) {
                         }
                         xy[i][j].set(itrX, itrY, value);
                     }
                 }
+                // draw
                 boolean fillShape = false;
-                if(Pattern.compile(">=|<=|<|>").matcher(equation.getEquation()).find()) {
+                if(Pattern.compile(">=|<=|<|>").matcher(exeq.equation.getEquation()).find()) {
                     fillShape = true;
                 }
                 drawWithKernel(fillShape, paint, canvas);

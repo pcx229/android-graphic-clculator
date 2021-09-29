@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 29
     buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId "com.graphingcalculator"
         minSdkVersion 27
-        targetSdkVersion 30
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
 
@@ -52,7 +52,7 @@ dependencies {
 
     implementation 'com.github.QuadFlask:colorpicker:0.0.15'
 
-    implementation 'com.udojava:EvalEx:2.6'
+    implementation 'androidx.preference:preference:1.1.1'
 
     implementation 'net.objecthunter:exp4j:0.4.8'
 

@@ -34,9 +34,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onPause() {
+    protected void onStop() {
         viewModel.saveSettings();
         viewModel.saveExpressions();
-        super.onPause();
+        super.onStop();
     }
 }

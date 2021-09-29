@@ -1,8 +1,8 @@
 package com.graphingcalculator.data;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
 
 import com.graphingcalculator.graph.Range;
 
@@ -24,11 +24,12 @@ public class Settings {
     }
 
     public static Settings load(Application context) {
-        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences pref = context.getSharedPreferences("SETTINGS", Context.MODE_PRIVATE);
+        //SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
 
         // range
         Range range;
-        if(pref.contains("range")) {
+        if(pref.contains("graph-range")) {
             float startX, endX, startY, endY;
             startX = pref.getFloat("range-startX", 0);
             endX = pref.getFloat("range-endX", 0);
@@ -52,11 +53,12 @@ public class Settings {
     }
 
     public void save(Application context) {
-        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences pref = context.getSharedPreferences("SETTINGS", Context.MODE_PRIVATE);
+        //SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor editor = pref.edit();
 
         // range
-        editor.putBoolean("range", true);
+        editor.putBoolean("graph-range", true);
         editor.putFloat("range-startX", (float) range.startX);
         editor.putFloat("range-endX", (float) range.endX);
         editor.putFloat("range-startY", (float) range.startY);

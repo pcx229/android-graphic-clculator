@@ -168,7 +168,7 @@ public class EquationsFragment extends Fragment {
             }
         });
 
-        viewModel.getExpressionsUpdates().observe(getActivity(), new Observer<List<expression>>() {
+        viewModel.getExpressionsUpdates().observe(requireActivity(), new Observer<List<expression>>() {
             @Override
             public void onChanged(List<expression> expressions) {
                 equationsRecyclerViewAdapter.setItemsUpdates(expressions);

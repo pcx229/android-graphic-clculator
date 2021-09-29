@@ -10,6 +10,10 @@
         android:id="@+id/graph"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        app:axisColor="@color/colorGraphAxisAndText"
+        app:gridColor="@color/colorGraphGrid"
+        android:textColor="@color/colorGraphAxisAndText"
+        android:colorBackground="@color/colorGraphBackground"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -25,7 +29,8 @@
         android:scaleY="0.8"
         app:layout_constraintBottom_toTopOf="@+id/ResetFloatingActionButton"
         app:layout_constraintRight_toRightOf="parent"
-        app:srcCompat="@drawable/ic_baseline_settings_24" />
+        app:srcCompat="@drawable/ic_baseline_settings_24"
+        />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/ResetFloatingActionButton"

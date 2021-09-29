@@ -62,13 +62,11 @@ public class MathGraph extends View {
             MIN_RANGE_UNTIL_CIRCLE_HIGHLIGHT = 0.01;
     public final static int CENTER_POINT_HIGHLIGHT_CIRCLE_SIZE_DP = 3;
     private int centerPointHighlightCircleSize;
-    public final static int CENTER_POINT_HIGHLIGHT_CIRCLE_COLOR_PRIMARY = Color.BLACK;
-    public final static int CENTER_POINT_HIGHLIGHT_TEXT_BACKGROUND_COLOR = Color.WHITE;
     public final static float AXIS_DIRECTION_ARROW_SIZE_DP = 30f;
     private float axisDirectionArrowSize;
 
     private double scaleX, scaleY, centerX, centerY;
-    private Range range = new Range();;
+    private Range range = new Range();
     private int width, height;
     private boolean initializedViewSize;
 
@@ -99,7 +97,7 @@ public class MathGraph extends View {
             gridColor = a.getColor(R.styleable.MathGraph_gridColor, DEFAULT_GRID_COLOR);
             gridBlockSize = a.getDimension(R.styleable.MathGraph_gridBlockSize, DEFAULT_BLOCK_SIZE_DP);
 
-            backgroundColor = a.getColor(R.styleable.MathGraph_android_textColor, DEFAULT_BACKGROUND_COLOR);
+            backgroundColor = a.getColor(R.styleable.MathGraph_android_colorBackground, DEFAULT_BACKGROUND_COLOR);
             fontFamily = a.getFont(R.styleable.MathGraph_android_fontFamily);
             fontSize = a.getDimension(R.styleable.MathGraph_android_textSize, DEFAULT_FONT_SIZE_SP);
             fontColor = a.getColor(R.styleable.MathGraph_android_textColor, DEFAULT_FONT_COLOR);
@@ -113,19 +111,25 @@ public class MathGraph extends View {
 
         // listen to changes in container size
         initializedViewSize = false;
-        addOnLayoutChangeListener((view, i, i1, i2, i3, i4, i5, i6, i7) -> {
-            width = getWidth();
-            height = getHeight();
-            if(sizeChangeListener != null) {
-                sizeChangeListener.onChange(width, height);
-            }
-            initializedViewSize = true;
-            invalidate();
-        });
 
         // scroll and drag events listeners
         scaleDetector = new ScaleGestureDetector(context, new GraphScaleListener());
         dragDetector = new GraphDragListener();
+    }
+
+    @Override
+    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight);
+        this.width = width;
+        this.height = height;
+        if(width == 0 && height == 0) {
+            return;
+        }
+        if(sizeChangeListener != null) {
+            sizeChangeListener.onChange(width, height);
+        }
+        initializedViewSize = true;
+        invalidate();
     }
 
     private void updateRangeStartEnd() {
@@ -153,7 +157,7 @@ public class MathGraph extends View {
 
     public void setRangeByStartEnd(float startX, float endX, float startY, float endY) {
         if(!initializedViewSize) {
-            post(() -> {
+            getRootView().post(() -> {
                 setRangeByStartEnd(startX, endX, startY, endY);
             });
             return;
@@ -170,7 +174,7 @@ public class MathGraph extends View {
     public void setRangeByStartEnd(float start, float end, FIT_RANGE fit) {
         if(!initializedViewSize) {
             FIT_RANGE finalFit = fit;
-            post(() -> {
+            getRootView().post(() -> {
                 setRangeByStartEnd(start, end, finalFit);
             });
             return;
@@ -543,9 +547,9 @@ public class MathGraph extends View {
                     Math.abs(range.startY) > MAX_RANGE_UNTIL_CIRCLE_HIGHLIGHT || Math.abs(range.endY) > MAX_RANGE_UNTIL_CIRCLE_HIGHLIGHT ||
                     Math.abs(gridStepX) < MIN_RANGE_UNTIL_CIRCLE_HIGHLIGHT || Math.abs(gridStepY) < MIN_RANGE_UNTIL_CIRCLE_HIGHLIGHT) {
                 paint.setStyle(Paint.Style.FILL);
-                paint.setColor(CENTER_POINT_HIGHLIGHT_CIRCLE_COLOR_PRIMARY);
+                paint.setColor(axisColor);
                 canvas.drawCircle(width/2f, height/2f, centerPointHighlightCircleSize*2f, paint);
-                paint.setColor(CENTER_POINT_HIGHLIGHT_TEXT_BACKGROUND_COLOR);
+                paint.setColor(backgroundColor);
                 String pointText = String.format("(%.6f, %.6f)", centerX, centerY);
                 textPaint.getTextBounds(pointText, 0, pointText.length(), numberTextSize);
                 float left = width/2f-numberTextSize.width()/2f,

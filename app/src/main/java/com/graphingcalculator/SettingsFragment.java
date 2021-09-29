@@ -393,7 +393,7 @@ public class SettingsFragment extends Fragment {
         });
 
         isSettingsLoaded = false;
-        viewModel.getSettingsUpdates().observe(getActivity(), new Observer<Settings>() {
+        viewModel.getSettingsUpdates().observe(requireActivity(), new Observer<Settings>() {
             @Override
             public void onChanged(Settings settings) {
                 updateRange(settings.getRange());

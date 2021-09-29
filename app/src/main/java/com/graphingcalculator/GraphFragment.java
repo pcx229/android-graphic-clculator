@@ -67,7 +67,7 @@ public class GraphFragment extends Fragment {
         graph.setOnGraphSizeChangesListener((width, height) -> {
             viewModel.setGraphSize(width, height);
         });
-        viewModel.getSettingsUpdates().observe(getActivity(), new Observer<Settings>() {
+        viewModel.getSettingsUpdates().observe(requireActivity(), new Observer<Settings>() {
             @Override
             public void onChanged(Settings settings) {
                 updateGraphRange(settings.getRange());
@@ -76,7 +76,7 @@ public class GraphFragment extends Fragment {
                 viewModel.getSettingsUpdates().removeObserver(this);
             }
         });
-        viewModel.getEquationsUpdates().observe(getActivity(), equations -> {
+        viewModel.getEquationsUpdates().observe(requireActivity(), equations -> {
             graph.setEquations(equations);
         });
     }
