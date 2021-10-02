@@ -1,6 +1,7 @@
 package com.graphingcalculator.graph;
 
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 
@@ -197,8 +198,8 @@ public class SystemOfEquations {
                 } catch(Exception e) {}
             }
 
-            calcWidth = (int) (screenWidth / (screenDensity *3));
-            calcHeight = (int) (screenHeight / (screenDensity *3));
+            calcWidth = (int) (screenWidth / (screenDensity*2.5));
+            calcHeight = (int) (screenHeight / (screenDensity*2.5));
             xy = new Point[calcHeight][calcWidth];
             for(int i=0;i<calcHeight;i++) {
                 for(int j=0;j<calcWidth;j++) {
@@ -229,19 +230,21 @@ public class SystemOfEquations {
             for(EquationsExpressions exeq : equationsExpressions) {
                 paint.setColor(exeq.equation.getColor());
                 pathX.reset();
-                for(double x=range.startX, lastX=Double.NaN, y=0, lastY=0; x < range.endX ; lastX=x, x+=stepX, lastY=y) {
+                for(double x=range.startX, lastX=Double.NaN, y=0; x < range.endX ; lastX=x, x+=stepX) {
                     exeq.expression.setVariable("x", x);
                     try {
                         y = exeq.expression.evaluate();
-                        float screenX = (float)(screenWidth *((x-range.startX)/range.getWidth())),
-                                screenY = (float)(screenHeight *((range.getHeight()-(y-range.startY))/range.getHeight()));
-                        if(!Double.isNaN(lastX)) {
-                            pathX.lineTo(screenX, screenY);
-                            pathX.moveTo(screenX, screenY);
-                        } else {
-                            pathX.moveTo(screenX, screenY);
-                        }
-                    } catch(Exception e) {}
+                    } catch(Exception e) {
+                        y = Double.NEGATIVE_INFINITY;
+                    }
+                    float screenX = (float)(screenWidth *((x-range.startX)/range.getWidth())),
+                            screenY = (float)(screenHeight *((range.getHeight()-(y-range.startY))/range.getHeight()));
+                    if(!Double.isNaN(lastX)) {
+                        pathX.lineTo(screenX, screenY);
+                        pathX.moveTo(screenX, screenY);
+                    } else {
+                        pathX.moveTo(screenX, screenY);
+                    }
                 }
                 pathX.close();
                 canvas.drawPath(pathX, paint);
@@ -250,6 +253,7 @@ public class SystemOfEquations {
 
         private class Point {
             public double x, y, density;
+            public byte sign;
 
             public double screenX, screenY;
             public boolean isMapped;
@@ -263,6 +267,7 @@ public class SystemOfEquations {
                 this.density = density;
                 isMapped = false;
                 isZeroed = false;
+                sign = 0x0;
             }
 
             void set(Point p) {
@@ -312,9 +317,94 @@ public class SystemOfEquations {
                 pathXY.moveTo((float) (screenX), (float) (screenY));
                 pathXY.lineTo((float) (to.screenX), (float) (to.screenY));
             }
+
+            public void drawPoint(int color, Paint paint, Canvas canvas) {
+                if(!isMapped) {
+                    mapToScreen();
+                }
+                paint.setColor(color);
+                canvas.drawPoint((float) (screenX), (float) (screenY), paint);
+            }
         }
 
-        private byte findKernel(int i, int j) {
+        private void drawDeptPositiveNegativeHeatMap(Paint paint, Canvas canvas) {
+            double pMin = Double.POSITIVE_INFINITY,
+                    pMax = Double.NEGATIVE_INFINITY,
+                    nMin = Double.POSITIVE_INFINITY,
+                    nMax = Double.NEGATIVE_INFINITY;
+            for(int i = 0; i < calcHeight; i++) {
+                for (int j = 0; j < calcWidth; j++) {
+                    if(xy[i][j].density >= 0) {
+                        if(pMin > xy[i][j].density) {
+                            pMin = xy[i][j].density;
+                        }
+                        if(pMax < xy[i][j].density) {
+                            pMax = xy[i][j].density;
+                        }
+                    } else {
+                        if(nMin > xy[i][j].density) {
+                            nMin = xy[i][j].density;
+                        }
+                        if(nMax < xy[i][j].density) {
+                            nMax = xy[i][j].density;
+                        }
+                    }
+                }
+            }
+            int color;
+            for(int i = 0; i < calcHeight; i++) {
+                for (int j = 0; j < calcWidth; j++) {
+                    if(xy[i][j].density >= 0) {
+                        color = Color.rgb(0, (int) ((xy[i][j].density-pMin)/(pMax-pMin)*255), 0);
+                    } else {
+                        color = Color.rgb((int) ((xy[i][j].density-nMin)/(nMax-nMin)*255), 0, 0);
+                    }
+                    xy[i][j].drawPoint(color, paint, canvas);
+                }
+            }
+        }
+
+        private void drawDeptHeatMap(Paint paint, Canvas canvas) {
+            double min = Double.POSITIVE_INFINITY,
+                    max = Double.NEGATIVE_INFINITY;
+            for(int i = 0; i < calcHeight; i++) {
+                for (int j = 0; j < calcWidth; j++) {
+                    if(min > xy[i][j].density) {
+                        min = xy[i][j].density;
+                    }
+                    if(max < xy[i][j].density) {
+                        max = xy[i][j].density;
+                    }
+                }
+            }
+            int color;
+            for(int i = 0; i < calcHeight; i++) {
+                for (int j = 0; j < calcWidth; j++) {
+                    color = Color.rgb(0, 0, (int) ((xy[i][j].density-min)/(max-min)*255));
+                    xy[i][j].drawPoint(color, paint, canvas);
+                }
+            }
+        }
+
+        private void drawFlatHeatMap(Paint paint, Canvas canvas) {
+            int color;
+            for(int i = 0; i < calcHeight; i++) {
+                for (int j = 0; j < calcWidth; j++) {
+                    if(xy[i][j].density >= 0) {
+                        color = Color.rgb(0, 255, 0);
+                    } else {
+                        color = Color.rgb(255, 0, 0);
+                    }
+                    xy[i][j].drawPoint(color, paint, canvas);
+                }
+            }
+        }
+
+        private boolean sameSign(double a, double b) {
+            return (a >= 0 && b >= 0) || (a < 0 && b < 0);
+        }
+
+        private byte signKernel(int i, int j) {
             byte kernel = 0x0;
             if(xy[i][j].density >= 0) {
                 kernel |= 0x1;
@@ -328,14 +418,27 @@ public class SystemOfEquations {
             if(xy[i+1][j+1].density >= 0) {
                 kernel |= 0x8;
             }
+            if((!sameSign(xy[i][j].density, xy[i][j+1].density) && Math.abs(xy[i][j].density - xy[i][j+1].density) > Math.abs(xy[i][j].density - xy[i][j+2].density)) ||
+                    (!sameSign(xy[i][j].density, xy[i+1][j].density) && Math.abs(xy[i][j].density - xy[i+1][j].density) > Math.abs(xy[i][j].density - xy[i+2][j].density)) ||
+                    (!sameSign(xy[i][j].density, xy[i+1][j+1].density) && Math.abs(xy[i][j].density - xy[i+1][j+1].density) > Math.abs(xy[i][j].density - xy[i+2][j+2].density))) {
+                kernel = 0x0;
+            }
             return kernel;
         }
 
+        private void applySignKernel() {
+            for(int i = 0; i < calcHeight - 2; i++) {
+                for (int j = 0; j < calcWidth - 2; j++) {
+                    xy[i][j].sign = signKernel(i, j);
+                }
+            }
+        }
+
         private void drawWithKernel(boolean fillShape) {
-            for(int i = 0; i < calcHeight - 1; i++) {
-                for (int j = 0; j < calcWidth - 1; j++) {
-                    byte kernel = findKernel(i, j);
-                    switch(kernel) {
+            applySignKernel();
+            for(int i = 0; i < calcHeight - 2; i++) {
+                for (int j = 0; j < calcWidth - 2; j++) {
+                    switch(xy[i][j].sign) {
                         case (0x1 | 0X2):
                         case (0x4 | 0X8):
                             xy[i][j].intermediateToDensityZero(xy[i+1][j]);
@@ -391,68 +494,6 @@ public class SystemOfEquations {
             }
         }
 
-        private void findZeroLine(int i, int j, int depth) {
-            Point child = null;
-            for(int m=0, ii=i-1, jj=j-1;m<3*3;m++, ii=i-1+m/3, jj=j-1+m%3) {
-                if(!(ii == i && jj == j) &&
-                        ii >= 0 && jj >= 0 &&
-                        ii < calcHeight && jj < calcWidth &&
-                        !xy[ii][jj].isMapped) {
-                    if((xy[i][j].density < 0 && xy[ii][jj].density >= 0) ||
-                            (xy[i][j].density >= 0 && xy[ii][jj].density < 0)) {
-                        child = xy[ii][jj];
-                        break;
-                    }
-                }
-            }
-            if(child == null) {
-                return;
-            }
-            xy[i][j].intermediateToDensityZero(child);
-            xy[i][j].mapToScreen();
-            if(depth != 0) {
-                pathXY.lineTo((float)xy[i][j].screenX, (float)xy[i][j].screenY);
-            }
-            for(int m=0, ii=i-1, jj=j-1;m<3*3;m++, ii=i-1+m/3, jj=j-1+m%3) {
-                if(!(ii == i && jj == j) &&
-                        ii >= 0 && jj >= 0 &&
-                        ii < calcHeight && jj < calcWidth &&
-                        !xy[ii][jj].isMapped) {
-                    if((xy[i][j].density < 0 && xy[ii][jj].density < 0) ||
-                            (xy[i][j].density >= 0 && xy[ii][jj].density >= 0)) {
-                        pathXY.moveTo((float)xy[i][j].screenX, (float)xy[i][j].screenY);
-                        findZeroLine(ii, jj, depth+1);
-                    }
-                }
-            }
-        }
-
-        private boolean differentSign(Point a, Point b) {
-            return (a.density < 0 && b.density >=0) || (a.density >= 0 && b.density < 0);
-        }
-
-        private void drawWithSearch(boolean fillShape) {
-            for(int i = 0; i < calcHeight - 1; i++) {
-                for (int j = 0; j < calcWidth - 1; j++) {
-                    if(differentSign(xy[i][j], xy[i][j+1]) || differentSign(xy[i][j], xy[i+1][j]) || differentSign(xy[i][j], xy[i+1][j+1])) {
-                        findZeroLine(i, j, 0);
-                    }
-                }
-            }
-            if(fillShape) {
-                for(int i = 0; i < calcHeight - 1; i++) {
-                    for (int j = 0; j < calcWidth - 1; j++) {
-                        if (xy[i][j].density >= 0 && xy[i][j+1].density >= 0) {
-                            xy[i][j].lineTo(xy[i][j+1]);
-                        }
-                        if (xy[i][j].density >= 0 && xy[i+1][j].density >= 0) {
-                            xy[i][j].lineTo(xy[i+1][j]);
-                        }
-                    }
-                }
-            }
-        }
-
         public void render(Paint paint, Canvas canvas) {
             double stepX = range.getWidth()/(calcWidth-1),
                     stepY = range.getHeight()/(calcHeight-1);
@@ -478,6 +519,7 @@ public class SystemOfEquations {
                         try {
                             value = exeq.expression.evaluate();
                         } catch (Exception e) {
+                            value = 0;
                         }
                         xy[i][j].set(itrX, itrY, value);
                     }
