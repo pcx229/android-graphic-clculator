@@ -1,14 +1,9 @@
 package com.graphingcalculator.graph;
 
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PorterDuff;
-
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
@@ -493,52 +488,6 @@ public class SystemOfEquations {
                             xy[i][j].lineTo(xy[i+1][j]);
                         }
                     }
-                }
-            }
-        }
-
-        private Range renderedRange, shouldRenderRange;
-        private Bitmap renderedBitmap;
-        private Canvas renderedCanvas;
-        private Paint renderedPaint;
-        private Thread rangeRender;
-
-        private MutableLiveData<Range> asyncRenderReadyState = new MutableLiveData<>();
-
-        public LiveData<Range> getAsyncRenderReadyState() {
-            return asyncRenderReadyState;
-        }
-
-        private class RangeRender extends Thread {
-            @Override
-            public void run() {
-                while(renderedRange == null || !renderedRange.equals(shouldRenderRange)) {
-                    Range temp = new Range(shouldRenderRange);
-                    renderedCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                    renderXY(renderedPaint, renderedCanvas, temp);
-                    renderedRange = temp;
-                }
-                rangeRender = null;
-                asyncRenderReadyState.postValue(renderedRange);
-                super.run();
-            }
-        }
-
-        public void render(Paint paint, Canvas canvas, Range range) {
-            if(range.equals(renderedRange)) {
-                canvas.drawBitmap(renderedBitmap, 0, 0, null);
-            } else {
-                shouldRenderRange = new Range(range);
-                if(renderedCanvas == null ||
-                        canvas.getWidth() != renderedCanvas.getWidth() ||
-                        canvas.getHeight() != renderedCanvas.getHeight()) {
-                    renderedBitmap = Bitmap.createBitmap(canvas.getWidth(), canvas.getHeight(), Bitmap.Config.ARGB_8888);
-                    renderedCanvas = new Canvas(renderedBitmap);
-                    renderedPaint = new Paint(paint);
-                }
-                if(rangeRender == null) {
-                    rangeRender = new RangeRender();
-                    rangeRender.start();
                 }
             }
         }

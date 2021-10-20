@@ -3,6 +3,10 @@ package com.graphingcalculator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.Message;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -25,6 +29,29 @@ import static org.junit.Assert.assertEquals;
  */
 @RunWith(AndroidJUnit4.class)
 public class ExampleInstrumentedTest {
+
+    @Test
+    public void cc() throws InterruptedException {
+
+        int UPDATE_RANGE = 1;
+        HandlerThread handlerThread = new HandlerThread("MyHandlerThread");
+        handlerThread.start();
+//        handlerThread.interrupt();
+//        handlerThread.quit();
+        Looper looper = handlerThread.getLooper();
+        Handler handler = new Handler(looper) {
+            public void handleMessage(Message msg) {
+                while(hasMessages(UPDATE_RANGE)) {
+
+                }
+            }
+        };
+        handler.sendEmptyMessage(UPDATE_RANGE);
+        handler.sendEmptyMessage(UPDATE_RANGE);
+        handler.sendEmptyMessage(UPDATE_RANGE);
+        handler.sendEmptyMessage(UPDATE_RANGE);
+        handlerThread.join();
+    }
 
     @Test
     public void matrix() {/*

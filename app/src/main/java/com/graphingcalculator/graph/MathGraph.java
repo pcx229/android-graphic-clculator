@@ -2,19 +2,21 @@ package com.graphingcalculator.graph;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.graphingcalculator.R;
 
@@ -84,6 +86,8 @@ public class MathGraph extends View {
 
     private OnGraphSizeChangesListener sizeChangeListener;
 
+    private float density;
+
     public MathGraph(Context context, AttributeSet attrs) {
         super(context, attrs);
 
@@ -117,6 +121,9 @@ public class MathGraph extends View {
         // scroll and drag events listeners
         scaleDetector = new ScaleGestureDetector(context, new GraphScaleListener());
         dragDetector = new GraphDragListener();
+
+        // others
+        density = getResources().getDisplayMetrics().density;
     }
 
     @Override
@@ -438,7 +445,7 @@ public class MathGraph extends View {
         super.invalidate();
 
         if(rangeChangeListener != null) {
-            rangeChangeListener.onChange(getRangeStartEnd());
+            rangeChangeListener.onChange(new Range(range));
         }
     }
 
@@ -454,13 +461,66 @@ public class MathGraph extends View {
         return point;
     }
 
+    private final static int UPDATE_RANGE_MESSAGE = 1;
+    private HandlerThread rangeRenderUpdatesHandlerThread;
+    private Handler rangeRenderUpdatesHandler;
+    private Bitmap rangeRenderedBitmap;
+    private Canvas rangeRenderedCanvas;
+    private Paint rangeRenderedPaint;
+    private SystemOfEquations.Renderer rangeRenderer;
+    private Range rangeRendered;
+    private boolean isRangeRendererInitialized = false;
+
+    private void initializeRangeRenderer() {
+        if(isRangeRendererInitialized || equations == null) {
+            return;
+        }
+        rangeRenderer = equations.renderer(width, height, density);
+        rangeRenderedBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        rangeRenderedCanvas = new Canvas(rangeRenderedBitmap);
+        rangeRenderedCanvas.setDensity((int) density);
+        rangeRenderedPaint = new Paint();
+        rangeRenderedPaint.setStrokeWidth(functionLineWidth);
+        rangeRenderedPaint.setStyle(Paint.Style.STROKE);
+        isRangeRendererInitialized = true;
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+
+        rangeRenderUpdatesHandlerThread = new HandlerThread("RangeRenderUpdatesHandlerThread");
+        rangeRenderUpdatesHandlerThread.start();
+        rangeRenderUpdatesHandler = new Handler(rangeRenderUpdatesHandlerThread.getLooper()) {
+            public void handleMessage(Message msg) {
+                if(isRangeRendererInitialized && !range.equals(rangeRendered)) {
+                    do {
+                        removeMessages(UPDATE_RANGE_MESSAGE);
+                        Range temp = new Range(range);
+                        rangeRenderedCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+                        rangeRenderer.renderXY(rangeRenderedPaint, rangeRenderedCanvas, temp);
+                        rangeRendered = temp;
+                    } while(hasMessages(UPDATE_RANGE_MESSAGE));
+                    invalidate();
+                }
+            }
+        };
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+
+        isRangeRendererInitialized = false;
+        rangeRenderUpdatesHandlerThread.quit();
+    }
+
     private Paint paint = new Paint();
     private TextPaint textPaint = new TextPaint();
     private Rect numberTextSize = new Rect();
     private Point centerAxis = new Point();
     private Point gridNumberX = new Point(),
             gridNumberY = new Point();
-    private boolean isWaitingForRepaintMessages = false;
 
     protected void onDraw(Canvas canvas) {
 
@@ -470,11 +530,12 @@ public class MathGraph extends View {
             return;
         }
 
-        long startTime, endTime;
-        startTime = System.currentTimeMillis();
+        initializeRangeRenderer();
+
+//        long startTime, endTime;
+//        startTime = System.currentTimeMillis();
 
         // setup canvas
-        float density = getResources().getDisplayMetrics().density;
         canvas.setDensity((int) density);
 
         // paint background
@@ -508,18 +569,10 @@ public class MathGraph extends View {
         }
 
         // equations
-        paint.reset();
-        paint.setStrokeWidth(functionLineWidth);
-        paint.setStyle(Paint.Style.STROKE);
-        if(equations != null) {
-            SystemOfEquations.Renderer renderer = equations.renderer(width, height, density);
-            renderer.render(paint, canvas, range);
-            if(!isWaitingForRepaintMessages) {
-                renderer.getAsyncRenderReadyState().observe((AppCompatActivity)getContext(), (range) -> {
-                    invalidate();
-                });
-                isWaitingForRepaintMessages = true;
-            }
+        if(range.equals(rangeRendered)) {
+            canvas.drawBitmap(rangeRenderedBitmap, 0, 0, null);
+        } else {
+            rangeRenderUpdatesHandler.sendEmptyMessage(UPDATE_RANGE_MESSAGE);
         }
 
         // axis
@@ -600,7 +653,7 @@ public class MathGraph extends View {
             }
         }
 
-        endTime = System.currentTimeMillis();
-        Log.d("MATH_GRAPH_DRAW_TIME", (endTime - startTime) + " milliseconds");
+//        endTime = System.currentTimeMillis();
+//        Log.d("MATH_GRAPH_DRAW_TIME", (endTime - startTime) + " milliseconds");
     }
 }
