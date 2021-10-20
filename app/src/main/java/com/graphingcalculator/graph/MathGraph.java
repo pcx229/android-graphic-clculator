@@ -14,6 +14,8 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.graphingcalculator.R;
 
 /**
@@ -458,6 +460,7 @@ public class MathGraph extends View {
     private Point centerAxis = new Point();
     private Point gridNumberX = new Point(),
             gridNumberY = new Point();
+    private boolean isWaitingForRepaintMessages = false;
 
     protected void onDraw(Canvas canvas) {
 
@@ -509,9 +512,14 @@ public class MathGraph extends View {
         paint.setStrokeWidth(functionLineWidth);
         paint.setStyle(Paint.Style.STROKE);
         if(equations != null) {
-            SystemOfEquations.Renderer renderer = equations.render(width, height, density);
-            renderer.setRange(range);
-            renderer.render(paint, canvas);
+            SystemOfEquations.Renderer renderer = equations.renderer(width, height, density);
+            renderer.render(paint, canvas, range);
+            if(!isWaitingForRepaintMessages) {
+                renderer.getAsyncRenderReadyState().observe((AppCompatActivity)getContext(), (range) -> {
+                    invalidate();
+                });
+                isWaitingForRepaintMessages = true;
+            }
         }
 
         // axis

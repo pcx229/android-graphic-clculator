@@ -1,5 +1,7 @@
 package com.graphingcalculator.graph;
 
+import java.util.Objects;
+
 public class Range {
     public double startX, endX, startY, endY;
 
@@ -56,5 +58,21 @@ public class Range {
     @Override
     public String toString() {
         return "Range{" + "startX=" + startX + ", endX=" + endX + ", startY=" + startY + ", endY=" + endY + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Range)) return false;
+        Range range = (Range) o;
+        return Double.compare(range.startX, startX) == 0 &&
+                Double.compare(range.endX, endX) == 0 &&
+                Double.compare(range.startY, startY) == 0 &&
+                Double.compare(range.endY, endY) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(startX, endX, startY, endY);
     }
 }

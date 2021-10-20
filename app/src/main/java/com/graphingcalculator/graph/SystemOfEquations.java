@@ -1,9 +1,14 @@
 package com.graphingcalculator.graph;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PorterDuff;
+
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
@@ -168,8 +173,6 @@ public class SystemOfEquations {
         }
         private List<EquationsExpressions> equationsExpressions;
 
-        private Range range;
-
         private Path pathX;
 
         private int calcWidth, calcHeight;
@@ -212,11 +215,7 @@ public class SystemOfEquations {
             return this.screenWidth == width && this.screenHeight == height && this.screenDensity == density;
         }
 
-        public void setRange(Range range) {
-            this.range = range;
-        }
-
-        public void renderX(Paint paint, Canvas canvas) {
+        public void renderX(Paint paint, Canvas canvas, Range range) {
             double stepX = range.getWidth()/((screenWidth / (screenDensity *3))-1);
             // general variables
             for(EquationsExpressions exeq : equationsExpressions) {
@@ -261,10 +260,13 @@ public class SystemOfEquations {
             public double zeroX, zeroY;
             public boolean isZeroed;
 
-            public void set(double x, double y, double density) {
+            public Range range;
+
+            public void set(double x, double y, double density, Range range) {
                 this.x = x;
                 this.y = y;
                 this.density = density;
+                this.range = range;
                 isMapped = false;
                 isZeroed = false;
                 sign = 0x0;
@@ -280,6 +282,7 @@ public class SystemOfEquations {
                 zeroX = p.zeroX;
                 zeroY = p.zeroY;
                 isZeroed = p.isZeroed;
+                range = p.range;
             }
 
             public void mapToScreen() {
@@ -494,7 +497,53 @@ public class SystemOfEquations {
             }
         }
 
-        public void render(Paint paint, Canvas canvas) {
+        private Range renderedRange, shouldRenderRange;
+        private Bitmap renderedBitmap;
+        private Canvas renderedCanvas;
+        private Paint renderedPaint;
+        private Thread rangeRender;
+
+        private MutableLiveData<Range> asyncRenderReadyState = new MutableLiveData<>();
+
+        public LiveData<Range> getAsyncRenderReadyState() {
+            return asyncRenderReadyState;
+        }
+
+        private class RangeRender extends Thread {
+            @Override
+            public void run() {
+                while(renderedRange == null || !renderedRange.equals(shouldRenderRange)) {
+                    Range temp = new Range(shouldRenderRange);
+                    renderedCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+                    renderXY(renderedPaint, renderedCanvas, temp);
+                    renderedRange = temp;
+                }
+                rangeRender = null;
+                asyncRenderReadyState.postValue(renderedRange);
+                super.run();
+            }
+        }
+
+        public void render(Paint paint, Canvas canvas, Range range) {
+            if(range.equals(renderedRange)) {
+                canvas.drawBitmap(renderedBitmap, 0, 0, null);
+            } else {
+                shouldRenderRange = new Range(range);
+                if(renderedCanvas == null ||
+                        canvas.getWidth() != renderedCanvas.getWidth() ||
+                        canvas.getHeight() != renderedCanvas.getHeight()) {
+                    renderedBitmap = Bitmap.createBitmap(canvas.getWidth(), canvas.getHeight(), Bitmap.Config.ARGB_8888);
+                    renderedCanvas = new Canvas(renderedBitmap);
+                    renderedPaint = new Paint(paint);
+                }
+                if(rangeRender == null) {
+                    rangeRender = new RangeRender();
+                    rangeRender.start();
+                }
+            }
+        }
+
+        public void renderXY(Paint paint, Canvas canvas, Range range) {
             double stepX = range.getWidth()/(calcWidth-1),
                     stepY = range.getHeight()/(calcHeight-1);
             // general variables
@@ -521,7 +570,7 @@ public class SystemOfEquations {
                         } catch (Exception e) {
                             value = 0;
                         }
-                        xy[i][j].set(itrX, itrY, value);
+                        xy[i][j].set(itrX, itrY, value, range);
                     }
                 }
                 // draw
@@ -536,7 +585,7 @@ public class SystemOfEquations {
         }
     }
 
-    public Renderer render(int width, int height, float density){
+    public Renderer renderer(int width, int height, float density){
         if(renderer == null || !renderer.isScreenParams(width, height, density)) {
             renderer = new Renderer(width, height, density);
         }
