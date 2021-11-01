@@ -81,6 +81,7 @@ public class MathGraph extends View {
     private GraphDragListener dragDetector;
 
     private SystemOfEquations equations;
+    private int equationsVersion;
 
     private OnRangeChangesListener rangeChangeListener;
 
@@ -124,6 +125,7 @@ public class MathGraph extends View {
 
         // others
         density = getResources().getDisplayMetrics().density;
+        equationsVersion = 0;
     }
 
     @Override
@@ -389,6 +391,7 @@ public class MathGraph extends View {
 
     public void setEquations(SystemOfEquations equations) {
         this.equations = equations;
+        equationsVersion++;
         invalidate();
     }
 
@@ -442,10 +445,14 @@ public class MathGraph extends View {
 
     @Override
     public void invalidate() {
-        super.invalidate();
-
         if(rangeChangeListener != null) {
             rangeChangeListener.onChange(new Range(range));
+        }
+
+        if(isRangeRendererInitialized) {
+            rangeRenderUpdatesHandler.sendEmptyMessage(UPDATE_RANGE_MESSAGE);
+        } else {
+            super.invalidate();
         }
     }
 
@@ -469,6 +476,7 @@ public class MathGraph extends View {
     private Paint rangeRenderedPaint;
     private SystemOfEquations.Renderer rangeRenderer;
     private Range rangeRendered;
+    private int equationsVersionRendered;
     private boolean isRangeRendererInitialized = false;
 
     private void initializeRangeRenderer() {
@@ -493,15 +501,16 @@ public class MathGraph extends View {
         rangeRenderUpdatesHandlerThread.start();
         rangeRenderUpdatesHandler = new Handler(rangeRenderUpdatesHandlerThread.getLooper()) {
             public void handleMessage(Message msg) {
-                if(isRangeRendererInitialized && !range.equals(rangeRendered)) {
+                if(isRangeRendererInitialized && (!range.equals(rangeRendered) || equationsVersionRendered != equationsVersion)) {
                     do {
                         removeMessages(UPDATE_RANGE_MESSAGE);
                         Range temp = new Range(range);
                         rangeRenderedCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
                         rangeRenderer.renderXY(rangeRenderedPaint, rangeRenderedCanvas, temp);
+                        equationsVersionRendered = equationsVersion;
                         rangeRendered = temp;
+                        MathGraph.super.invalidate();
                     } while(hasMessages(UPDATE_RANGE_MESSAGE));
-                    invalidate();
                 }
             }
         };
